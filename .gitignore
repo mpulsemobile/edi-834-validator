@@ -1,0 +1,15 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Companion guide documents (do not commit)
+**/*.pdf
+**/*.docx
+
+# macOS
+.DS_Store
+
+# Real EDI files — never commit PHI data
+# Only synthetic/de-identified files belong in public/sample-data/
+*.edi.real
