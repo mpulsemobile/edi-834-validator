@@ -167,6 +167,130 @@ export function generateSepOffExchange(f) {
   return segs.join("\n");
 }
 
+/**
+ * generateAddSpouse — mirrors 10-add-spouse-subscriber-and-spouse-medical.edi
+ * Two INS loops: subscriber (Y/18) + spouse (N/01), each with their own 2700 loop.
+ *
+ * f.subscriber — same shape as generateSepOffExchange
+ * f.spouse — { firstName, lastName, dob, gender, memberId, exchangeMemberId,
+ *               address1, city, state, zip, countyCode,
+ *               coverageType, coverageEffectiveDate, coverageAppDate, premium, planId }
+ */
+export function generateAddSpouse(f) {
+  const ts = nowTimestamp();
+  const dateStr = nowDate();
+  const timeStr = nowTime();
+  const ctlNum = f.interchangeControlNum || String(Date.now()).slice(-9).padStart(9, "0");
+  const stCtl = f.stControlNum || "26516";
+
+  const segs = [];
+  let segCount = 0;
+  const seg = (parts) => { segs.push(parts.join("*") + "~"); segCount++; };
+
+  // Envelope
+  segs.push(
+    `ISA*00*          *00*          *ZZ*${pad(f.sponsorEin, 15)}*ZZ*${pad(f.payerEin, 15)}*${dateStr.slice(2)}*${timeStr}*^*00501*${ctlNum}*0*T*:~`
+  );
+  segs.push(`GS*BE*${f.sponsorEin}*${f.payerEin}*${dateStr}*${timeStr}*1*X*005010X220A1~`);
+
+  seg(["ST", "834", stCtl, "005010X220A1"]);
+  seg(["BGN", "00", stCtl, dateStr, timeStr, "ET", "", "", "2"]);
+
+  // N1 loops
+  seg(["N1", "P5", f.sponsorName, "FI", f.sponsorEin]);
+  seg(["N1", "IN", f.payerName, "FI", f.payerEin]);
+  if (f.brokerName) seg(["N1", "BO", f.brokerName, "94", f.brokerId || ""]);
+
+  // ── SUBSCRIBER ────────────────────────────────────────────────────────────
+  const sub = f.subscriber;
+  seg(["INS", "Y", "18", "021", "32", "A", "", "", "FT", "", "N", "", "", "U"]);
+  seg(["REF", "0F", sub.subscriberId]);
+  if (sub.groupNumber) seg(["REF", "1L", sub.groupNumber]);
+  seg(["REF", "17", sub.exchangeMemberId || sub.subscriberId]);
+  if (sub.refCode6O) seg(["REF", "6O", sub.refCode6O]);
+  seg(["DTP", "336", "D8", fmtDate(sub.enrollmentDate)]);
+  seg(["DTP", "356", "D8", fmtDate(sub.planYearStart)]);
+  seg(["DTP", "357", "D8", fmtDate(sub.planYearEnd)]);
+  seg(["NM1", "IL", "1", sub.lastName, sub.firstName, "", "", "", "34", sub.subscriberId]);
+  const perParts = ["PER", "IP", ""];
+  if (sub.phone) { perParts.push("HP"); perParts.push(sub.phone.replace(/\D/g, "")); }
+  if (sub.email) { perParts.push("EM"); perParts.push(sub.email); }
+  if (perParts.length > 3) seg(perParts);
+  if (sub.address) {
+    seg(["N3", sub.address]);
+    const n4 = ["N4", sub.city || "", sub.state || "", sub.zip || ""];
+    if (sub.countyCode) n4.push("", "CY", sub.countyCode);
+    seg(n4);
+  }
+  const dmg = ["DMG", "D8", fmtDate(sub.dob), sub.gender || ""];
+  if (sub.raceEthnicity) dmg.push("", sub.raceEthnicity);
+  seg(dmg);
+  if (sub.tobaccoUse) seg(["HLH", sub.tobaccoUse]);
+  if (sub.spokenLanguage) seg(["LUI", "LE", sub.spokenLanguage, "", "7"]);
+
+  // Subscriber coverage (TWO = subscriber + spouse)
+  seg(["HD", "021", "", sub.coverageType || "HLT", "", "TWO"]);
+  seg(["DTP", "303", "D8", fmtDate(sub.coverageAppDate || sub.coverageEffectiveDate)]);
+  seg(["DTP", "348", "D8", fmtDate(sub.coverageEffectiveDate)]);
+  if (sub.premium) seg(["AMT", "P3", String(sub.premium)]);
+  if (sub.planId) seg(["REF", "CE", sub.planId]);
+  if (sub.billingArrangement) seg(["REF", "9V", sub.billingArrangement]);
+
+  // Subscriber 2700 loop (10 LX — no SEP REASON, ICHRA replaces it at LX*8)
+  seg(["LS", "2700"]);
+  seg(["LX", "1"]); seg(["N1", "75", "REQUEST SUBMIT TIMESTAMP"]); seg(["REF", "17", ts]);
+  seg(["LX", "2"]); seg(["N1", "75", "SOURCE EXCHANGE ID"]); seg(["REF", "17", f.sourceExchangeId || ""]);
+  seg(["LX", "3"]); seg(["N1", "75", "ISFFM"]); seg(["REF", "17", f.isFFM || "false"]);
+  seg(["LX", "4"]); seg(["N1", "75", "PRE AMT TOT"]); seg(["REF", "9X", String(f.preAmtTot || "")]); seg(["DTP", "007", "D8", fmtDate(sub.coverageAppDate || sub.coverageEffectiveDate)]);
+  seg(["LX", "5"]); seg(["N1", "75", "PRE AMT 1"]); seg(["REF", "9X", String(sub.premium || "")]); seg(["DTP", "007", "D8", fmtDate(sub.coverageAppDate || sub.coverageEffectiveDate)]);
+  seg(["LX", "6"]); seg(["N1", "75", "TOT RES AMT"]); seg(["REF", "9V", String(f.totResAmt || "")]); seg(["DTP", "007", "D8", fmtDate(sub.coverageAppDate || sub.coverageEffectiveDate)]);
+  seg(["LX", "7"]); seg(["N1", "75", "RATING AREA"]); seg(["REF", "9X", f.ratingArea || ""]); seg(["DTP", "007", "D8", fmtDate(sub.coverageAppDate || sub.coverageEffectiveDate)]);
+  seg(["LX", "8"]); seg(["N1", "75", "ICHRA/QSEHRA"]); seg(["REF", "17", f.ichraQsehra || "N"]);
+  seg(["LX", "9"]); seg(["N1", "75", "QSEHRA Spouse"]); seg(["REF", "17", f.qsehraSpouse || "N"]);
+  seg(["LX", "10"]); seg(["N1", "75", "QSEHRA Both"]); seg(["REF", "17", f.qsehraBoth || "N"]);
+  seg(["LE", "2700"]);
+
+  // ── SPOUSE ────────────────────────────────────────────────────────────────
+  const sp = f.spouse;
+  seg(["INS", "N", "01", "021", "32", "A", "", "", "", "", "N", "", "", "U"]);
+  seg(["REF", "0F", sub.subscriberId]);
+  if (sub.groupNumber) seg(["REF", "1L", sub.groupNumber]);
+  seg(["REF", "17", sp.exchangeMemberId || sp.memberId || ""]);
+  if (sub.refCode6O) seg(["REF", "6O", sub.refCode6O]);
+  seg(["DTP", "336", "D8", fmtDate(sub.enrollmentDate)]);
+  seg(["DTP", "356", "D8", fmtDate(sub.planYearStart)]);
+  seg(["DTP", "357", "D8", fmtDate(sub.planYearEnd)]);
+  seg(["NM1", "IL", "1", sp.lastName, sp.firstName, "", "", "", "34", sp.memberId || ""]);
+  if (sp.address) {
+    seg(["N3", sp.address]);
+    const n4sp = ["N4", sp.city || "", sp.state || "", sp.zip || ""];
+    if (sp.countyCode) n4sp.push("", "CY", sp.countyCode);
+    seg(n4sp);
+  }
+  seg(["DMG", "D8", fmtDate(sp.dob), sp.gender || ""]);
+  if (sp.tobaccoUse) seg(["HLH", sp.tobaccoUse]);
+
+  // Spouse coverage
+  seg(["HD", "021", "", sp.coverageType || "HLT", "", "TWO"]);
+  seg(["DTP", "303", "D8", fmtDate(sp.coverageAppDate || sp.coverageEffectiveDate)]);
+  seg(["DTP", "348", "D8", fmtDate(sp.coverageEffectiveDate)]);
+  if (sp.premium) seg(["AMT", "P3", String(sp.premium)]);
+  if (sp.planId) seg(["REF", "CE", sp.planId]);
+
+  // Spouse 2700 loop (4 LX only)
+  seg(["LS", "2700"]);
+  seg(["LX", "1"]); seg(["N1", "75", "REQUEST SUBMIT TIMESTAMP"]); seg(["REF", "17", ts]);
+  seg(["LX", "2"]); seg(["N1", "75", "SOURCE EXCHANGE ID"]); seg(["REF", "17", f.sourceExchangeId || ""]);
+  seg(["LX", "3"]); seg(["N1", "75", "ISFFM"]); seg(["REF", "17", f.isFFM || "false"]);
+  seg(["LX", "4"]); seg(["N1", "75", "PRE AMT 1"]); seg(["REF", "9X", String(sp.premium || "")]); seg(["DTP", "007", "D8", fmtDate(sp.coverageAppDate || sp.coverageEffectiveDate)]);
+  seg(["LE", "2700"]);
+
+  seg(["SE", String(segCount + 1), stCtl]);
+  segs.push("GE*1*1~");
+  segs.push(`IEA*1*${ctlNum}~`);
+  return segs.join("\n");
+}
+
 export const SEP_REASONS = [
   { value: "AI", label: "AI — Initial / New SEP" },
   { value: "AE", label: "AE — Loss of Coverage" },

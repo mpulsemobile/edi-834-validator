@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { parse834, formatDate } from "../utils/parse834";
 import { exportMembersToCSV } from "../utils/csvExport";
 import GeneratePanel from "../components/GeneratePanel";
+import GenerateAddSpousePanel from "../components/GenerateAddSpousePanel";
 import {
   getRelationshipLabel,
   getRaceEthnicityLabels,
@@ -356,6 +357,7 @@ export default function Dashboard() {
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
   const [showGenerate, setShowGenerate] = useState(false);
+  const [showGenerateSpouse, setShowGenerateSpouse] = useState(false);
 
   const handleGeneratedEdi = (ediText, name) => {
     try {
@@ -486,7 +488,11 @@ export default function Dashboard() {
             </select>
 
             <button style={styles.secondaryButton} onClick={() => setShowGenerate(true)}>
-              ✦ Generate EDI
+              ✦ SEP Off-Exchange
+            </button>
+
+            <button style={styles.secondaryButton} onClick={() => setShowGenerateSpouse(true)}>
+              ✦ Add Spouse
             </button>
 
             <label style={styles.uploadLabel}>
@@ -504,6 +510,13 @@ export default function Dashboard() {
         {showGenerate && (
           <GeneratePanel
             onClose={() => setShowGenerate(false)}
+            onLoad={handleGeneratedEdi}
+          />
+        )}
+
+        {showGenerateSpouse && (
+          <GenerateAddSpousePanel
+            onClose={() => setShowGenerateSpouse(false)}
             onLoad={handleGeneratedEdi}
           />
         )}
