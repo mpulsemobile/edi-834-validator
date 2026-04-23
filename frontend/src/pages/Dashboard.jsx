@@ -600,10 +600,18 @@ export default function Dashboard() {
                 </span>
                 <span style={styles.badge}>
                   Sponsor: {parsed.sponsor.name || "N/A"}
+                  {parsed.sponsor.idCode && ` (${parsed.sponsor.idCodeQualifier}: ${parsed.sponsor.idCode})`}
                 </span>
                 <span style={styles.badge}>
                   Payer: {parsed.payer.name || "N/A"}
+                  {parsed.payer.idCode && ` (${parsed.payer.idCodeQualifier}: ${parsed.payer.idCode})`}
                 </span>
+                {parsed.broker?.name && (
+                  <span style={styles.badge}>
+                    Broker: {parsed.broker.name}
+                    {parsed.broker.idCode && ` (${parsed.broker.idCodeQualifier}: ${parsed.broker.idCode})`}
+                  </span>
+                )}
                 <span style={styles.badge}>
                   Version: {parsed.group.version || "N/A"}
                 </span>
