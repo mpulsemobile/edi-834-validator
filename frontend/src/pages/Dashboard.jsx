@@ -519,7 +519,43 @@ export default function Dashboard() {
             <div style={styles.cardLabel}>Warnings</div>
             <div style={styles.cardValue}>{parsed?.validation.warnings.length || 0}</div>
           </div>
+
+          <div style={styles.card}>
+            <div style={styles.cardLabel}>Unrecognized Segments</div>
+            <div style={{ ...styles.cardValue, color: parsed?.validation.unrecognizedSegments?.length ? "#b45309" : "#0f172a" }}>
+              {parsed?.validation.unrecognizedSegments?.length || 0}
+            </div>
+          </div>
         </div>
+
+        {parsed && parsed.validation.unrecognizedSegments?.length > 0 && (
+          <div style={{ ...styles.section, borderLeft: "4px solid #f59e0b" }}>
+            <h2 style={{ ...styles.sectionTitle, color: "#92400e" }}>Unrecognized Segments</h2>
+            <p style={{ ...styles.muted, marginBottom: "12px" }}>
+              These segments were present in the file but not handled by the parser. They are shown here for inspection.
+            </p>
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>#</th>
+                    <th style={styles.th}>Segment ID</th>
+                    <th style={styles.th}>Raw Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsed.validation.unrecognizedSegments.map((seg, i) => (
+                    <tr key={i}>
+                      <td style={styles.td}>{i + 1}</td>
+                      <td style={{ ...styles.td, fontWeight: 700 }}>{seg.split("*")[0]}</td>
+                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: "12px", color: "#475569" }}>{seg}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {parsed && (
           <>
