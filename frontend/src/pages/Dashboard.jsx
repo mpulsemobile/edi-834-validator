@@ -487,13 +487,22 @@ export default function Dashboard() {
               ))}
             </select>
 
-            <button style={styles.secondaryButton} onClick={() => setShowGenerate(true)}>
-              ✦ SEP Off-Exchange
-            </button>
-
-            <button style={styles.secondaryButton} onClick={() => setShowGenerateSpouse(true)}>
-              ✦ Add Spouse
-            </button>
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <select
+                style={{ ...styles.select, minWidth: "200px" }}
+                defaultValue=""
+                onChange={e => {
+                  const v = e.target.value;
+                  e.target.value = "";
+                  if (v === "sep") setShowGenerate(true);
+                  if (v === "spouse") setShowGenerateSpouse(true);
+                }}
+              >
+                <option value="" disabled>✦ Create EDI...</option>
+                <option value="sep">SEP Subscriber</option>
+                <option value="spouse">Add Spouse to Subscriber</option>
+              </select>
+            </div>
 
             <label style={styles.uploadLabel}>
               Upload your 834 File
