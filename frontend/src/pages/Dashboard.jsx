@@ -261,24 +261,25 @@ const styles = {
   },
 };
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const SCENARIOS = [
   { value: "", label: "Load Sample Scenario..." },
   // SEP Off-Exchange — Subscriber Only (Green)
-  { value: "/sample-data/01-sep-off-exchange-subscriber-only-medical.edi", label: "01 — SEP New Enrollment: Subscriber Only — Medical" },
-  { value: "/sample-data/02-sep-off-exchange-subscriber-only-vision.edi", label: "02 — SEP New Enrollment: Subscriber Only — Vision" },
-  { value: "/sample-data/03-sep-off-exchange-subscriber-only-dental.edi", label: "03 — SEP New Enrollment: Subscriber Only — Dental" },
+  { value: `${BASE}/sample-data/01-sep-off-exchange-subscriber-only-medical.edi`, label: "01 — SEP New Enrollment: Subscriber Only — Medical" },
+  { value: `${BASE}/sample-data/02-sep-off-exchange-subscriber-only-vision.edi`, label: "02 — SEP New Enrollment: Subscriber Only — Vision" },
+  { value: `${BASE}/sample-data/03-sep-off-exchange-subscriber-only-dental.edi`, label: "03 — SEP New Enrollment: Subscriber Only — Dental" },
   // SEP Termination — Subscriber Only (Green)
-  { value: "/sample-data/04-sep-off-exchange-subscriber-only-medical-terminate.edi", label: "04 — SEP Termination: Subscriber Only — Medical" },
-  { value: "/sample-data/05-sep-off-exchange-subscriber-only-dental-terminate.edi", label: "05 — SEP Termination: Subscriber Only — Dental" },
-  { value: "/sample-data/06-sep-off-exchange-subscriber-only-vision-terminate.edi", label: "06 — SEP Termination: Subscriber Only — Vision" },
+  { value: `${BASE}/sample-data/04-sep-off-exchange-subscriber-only-medical-terminate.edi`, label: "04 — SEP Termination: Subscriber Only — Medical" },
+  { value: `${BASE}/sample-data/05-sep-off-exchange-subscriber-only-dental-terminate.edi`, label: "05 — SEP Termination: Subscriber Only — Dental" },
+  { value: `${BASE}/sample-data/06-sep-off-exchange-subscriber-only-vision-terminate.edi`, label: "06 — SEP Termination: Subscriber Only — Vision" },
   // Add Spouse — Subscriber Cancellation (Blue)
-  { value: "/sample-data/07-add-spouse-subscriber-cancel-medical.edi", label: "07 — Add Spouse: Subscriber Cancellation — Medical" },
-  { value: "/sample-data/08-add-spouse-subscriber-cancel-dental.edi", label: "08 — Add Spouse: Subscriber Cancellation — Dental" },
-  { value: "/sample-data/09-add-spouse-subscriber-cancel-vision.edi", label: "09 — Add Spouse: Subscriber Cancellation — Vision" },
+  { value: `${BASE}/sample-data/07-add-spouse-subscriber-cancel-medical.edi`, label: "07 — Add Spouse: Subscriber Cancellation — Medical" },
+  { value: `${BASE}/sample-data/08-add-spouse-subscriber-cancel-dental.edi`, label: "08 — Add Spouse: Subscriber Cancellation — Dental" },
+  { value: `${BASE}/sample-data/09-add-spouse-subscriber-cancel-vision.edi`, label: "09 — Add Spouse: Subscriber Cancellation — Vision" },
   // Add Spouse — New Enrollment: Subscriber + Spouse (Blue)
-  { value: "/sample-data/10-add-spouse-subscriber-and-spouse-medical.edi", label: "10 — Add Spouse: New Subscriber + Spouse — Medical" },
-  { value: "/sample-data/11-add-spouse-subscriber-and-spouse-dental.edi", label: "11 — Add Spouse: New Subscriber + Spouse — Dental" },
-  { value: "/sample-data/12-add-spouse-subscriber-and-spouse-vision.edi", label: "12 — Add Spouse: New Subscriber + Spouse — Vision" },
+  { value: `${BASE}/sample-data/10-add-spouse-subscriber-and-spouse-medical.edi`, label: "10 — Add Spouse: New Subscriber + Spouse — Medical" },
+  { value: `${BASE}/sample-data/11-add-spouse-subscriber-and-spouse-dental.edi`, label: "11 — Add Spouse: New Subscriber + Spouse — Dental" },
+  { value: `${BASE}/sample-data/12-add-spouse-subscriber-and-spouse-vision.edi`, label: "12 — Add Spouse: New Subscriber + Spouse — Vision" },
 ];
 
 function getMemberIssues(member) {
