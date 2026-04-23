@@ -280,6 +280,7 @@ export function parse834(raw) {
             coverageCount: 0,
             warnings: [],
             errors: [],
+            unrecognizedSegments: [],
             summary: {
                 missingNames: 0,
                 missingIds: 0,
@@ -666,6 +667,7 @@ export function parse834(raw) {
                 break;
 
             default:
+                result.validation.unrecognizedSegments.push(elements.join("*"));
                 break;
         }
     }
