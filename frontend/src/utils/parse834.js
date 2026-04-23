@@ -667,7 +667,7 @@ export function parse834(raw) {
                 break;
 
             default:
-                result.validation.unrecognizedSegments.push(segment);
+                result.validation.unrecognizedSegments.push(elements.join("*"));
                 break;
         }
     }
