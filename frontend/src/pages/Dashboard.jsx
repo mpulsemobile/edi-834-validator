@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { parse834, formatDate } from "../utils/parse834";
 import { exportMembersToCSV } from "../utils/csvExport";
+import GeneratePanel from "../components/GeneratePanel";
 import {
   getRelationshipLabel,
   getRaceEthnicityLabels,
@@ -354,6 +355,20 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
+  const [showGenerate, setShowGenerate] = useState(false);
+
+  const handleGeneratedEdi = (ediText, name) => {
+    try {
+      setError("");
+      setSearch("");
+      setFileName(name);
+      setRawText(ediText);
+      setParsed(parse834(ediText));
+    } catch (err) {
+      setError(err.message || "Failed to parse generated file.");
+      setParsed(null);
+    }
+  };
 
   const handleLoadSample = () => {
     try {
@@ -470,6 +485,10 @@ export default function Dashboard() {
               ))}
             </select>
 
+            <button style={styles.secondaryButton} onClick={() => setShowGenerate(true)}>
+              ✦ Generate EDI
+            </button>
+
             <label style={styles.uploadLabel}>
               Upload your 834 File
               <input
@@ -481,6 +500,13 @@ export default function Dashboard() {
             </label>
           </div>
         </div>
+
+        {showGenerate && (
+          <GeneratePanel
+            onClose={() => setShowGenerate(false)}
+            onLoad={handleGeneratedEdi}
+          />
+        )}
 
         {error && (
           <div style={styles.errorBox}>
