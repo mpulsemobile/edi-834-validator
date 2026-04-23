@@ -1,166 +1,179 @@
 /**
  * generate834.js
- * Builds a valid X12 834 Benefits Enrollment EDI string from structured input.
+ * Generates a valid X12 834 EDI for SEP Off-Exchange Subscriber Only.
+ * Structure mirrors: 01-sep-off-exchange-subscriber-only-medical.edi
  */
 
-function pad(str, len, char = " ") {
-  return String(str).padEnd(len, char).slice(0, len);
-}
-
-function today() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10).replace(/-/g, "");
-}
-
-function nowTime() {
-  const d = new Date();
-  return d.toTimeString().slice(0, 5).replace(":", "");
-}
-
-function randomControlNum() {
-  return String(Math.floor(Math.random() * 999999999)).padStart(9, "0");
+function pad(str, len) {
+  return String(str || "").padEnd(len, " ").slice(0, len);
 }
 
 function fmtDate(dateStr) {
-  // accepts YYYY-MM-DD or YYYYMMDD, outputs YYYYMMDD
-  if (!dateStr) return "";
-  return dateStr.replace(/-/g, "");
+  return (dateStr || "").replace(/-/g, "");
 }
 
-/**
- * Main generator.
- *
- * @param {Object} input
- * @param {string} input.transactionType  - "021" (new enrollment), "024" (termination), "001" (change/add dependent)
- * @param {string} input.maintenanceReason - "AI" (initial), "4N" (termination), etc.
- * @param {Object} input.sponsor          - { name, ein }
- * @param {Object} input.payer            - { name, ein }
- * @param {Object} input.broker           - { name, id } (optional)
- * @param {Object} input.subscriber       - see shape below
- * @param {Array}  input.dependents       - array of dependent objects (optional)
- *
- * subscriber / dependent shape:
- * {
- *   firstName, lastName,
- *   dob,          // YYYY-MM-DD
- *   gender,       // M / F / U
- *   ssn,          // 9 digits, no dashes
- *   memberId,     // optional — falls back to ssn
- *   address1, address2, city, state, zip,
- *   phone, email,
- *   coverages: [{ type: "HLT|DEN|VIS", planId, effectiveDate, termDate, premium }]
- * }
- */
-export function generate834(input) {
-  const {
-    transactionType = "021",
-    maintenanceReason = "AI",
-    sponsor = { name: "SPONSOR", ein: "000000000" },
-    payer = { name: "PAYER", ein: "000000000" },
-    broker,
-    subscriber,
-    dependents = [],
-  } = input;
+function nowTimestamp() {
+  const d = new Date();
+  const YYYY = d.getFullYear();
+  const MM = String(d.getMonth() + 1).padStart(2, "0");
+  const DD = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${YYYY}${MM}${DD}${hh}${mm}${ss}`;
+}
 
-  const ctlNum = randomControlNum();
-  const stNum = "00001";
-  const dateStr = today();
+function nowDate() { return nowTimestamp().slice(0, 8); }
+function nowTime() { return nowTimestamp().slice(8, 12); }
+
+export function generateSepOffExchange(f) {
+  const ts = nowTimestamp();
+  const dateStr = nowDate();
   const timeStr = nowTime();
-  const refNum = String(Date.now()).slice(-8);
+  const ctlNum = String(Date.now()).slice(-9).padStart(9, "0");
+  const stCtl = f.stControlNum || "26504";
 
-  const lines = [];
+  const segs = [];
   let segCount = 0;
 
-  const seg = (...parts) => {
-    lines.push(parts.join("*") + "~");
+  const seg = (parts) => {
+    segs.push(parts.join("*") + "~");
     segCount++;
   };
 
-  // ISA / GS envelope
-  lines.push(
-    `ISA*00*          *00*          *ZZ*${pad(sponsor.ein, 15)}*ZZ*${pad(payer.ein, 15)}*${dateStr.slice(2)}*${timeStr}*^*00501*${ctlNum}*0*T*:~`
+  // Envelope
+  segs.push(
+    `ISA*00*          *00*          *ZZ*${pad(f.sponsorEin, 15)}*ZZ*${pad(f.payerEin, 15)}*${dateStr.slice(2)}*${timeStr}*^*00501*${ctlNum}*0*T*:~`
   );
-  lines.push(`GS*BE*${sponsor.ein}*${payer.ein}*${dateStr}*${timeStr}*1*X*005010X220A1~`);
+  segs.push(`GS*BE*${f.sponsorEin}*${f.payerEin}*${dateStr}*${timeStr}*1*X*005010X220A1~`);
 
   // ST / BGN
-  seg(`ST`, `834`, stNum, `005010X220A1`);
-  seg(`BGN`, `00`, refNum, dateStr, timeStr, `ET`, ``, ``, `2`);
+  seg(["ST", "834", stCtl, "005010X220A1"]);
+  seg(["BGN", "00", stCtl, dateStr, timeStr, "ET", "", "", "2"]);
 
-  // N1 loops
-  seg(`N1`, `P5`, sponsor.name, `FI`, sponsor.ein);
-  seg(`N1`, `IN`, payer.name, `FI`, payer.ein);
-  if (broker) {
-    seg(`N1`, `BO`, broker.name, `94`, broker.id);
+  // N1 Loops
+  seg(["N1", "P5", f.sponsorName, "FI", f.sponsorEin]);
+  seg(["N1", "IN", f.payerName, "FI", f.payerEin]);
+  if (f.brokerName) seg(["N1", "BO", f.brokerName, "94", f.brokerId || ""]);
+
+  // INS
+  seg(["INS", "Y", "18", "021", "AI", "A", "", "", "FT", "", "N", "", "", "U"]);
+
+  // REF
+  seg(["REF", "0F", f.subscriberId]);
+  if (f.groupNumber) seg(["REF", "1L", f.groupNumber]);
+  seg(["REF", "17", f.exchangeMemberId || f.subscriberId]);
+  if (f.refCode6O) seg(["REF", "6O", f.refCode6O]);
+
+  // DTP enrollment / plan year
+  seg(["DTP", "336", "D8", fmtDate(f.enrollmentDate)]);
+  seg(["DTP", "356", "D8", fmtDate(f.planYearStart)]);
+  seg(["DTP", "357", "D8", fmtDate(f.planYearEnd)]);
+
+  // NM1 member name
+  seg(["NM1", "IL", "1", f.lastName, f.firstName, "", "", "", "34", f.subscriberId]);
+
+  // PER contact
+  const perParts = ["PER", "IP", ""];
+  if (f.phone) { perParts.push("HP"); perParts.push(f.phone.replace(/\D/g, "")); }
+  if (f.email) { perParts.push("EM"); perParts.push(f.email); }
+  if (perParts.length > 3) seg(perParts);
+
+  // N3 / N4 address
+  if (f.address) {
+    seg(["N3", f.address]);
+    const n4 = ["N4", f.city || "", f.state || "", f.zip || ""];
+    if (f.countyCode) { n4.push("", "CY", f.countyCode); }
+    seg(n4);
   }
 
-  // Helper: emit one member (subscriber or dependent)
-  const emitMember = (member, isSubscriber) => {
-    const relCode = isSubscriber ? "18" : (member.relationshipCode || "19");
-    const id = member.memberId || member.ssn || "000000000";
+  // DMG demographics
+  const dmgParts = ["DMG", "D8", fmtDate(f.dob), f.gender || ""];
+  if (f.raceEthnicity) dmgParts.push("", f.raceEthnicity);
+  seg(dmgParts);
 
-    seg(`INS`, isSubscriber ? `Y` : `N`, relCode, transactionType, maintenanceReason, `A`, ``, ``, `FT`, ``, `N`, ``, ``, `U`);
-    seg(`REF`, `0F`, id);
-    if (member.groupId) seg(`REF`, `1L`, member.groupId);
-    if (member.exchangeId) seg(`REF`, `17`, member.exchangeId);
+  // HLH / LUI
+  if (f.tobaccoUse) seg(["HLH", f.tobaccoUse]);
+  if (f.spokenLanguage) seg(["LUI", "LE", f.spokenLanguage, "", "7"]);
 
-    // Effective / benefit dates from first coverage, or subscriber-level
-    if (member.effectiveDate) seg(`DTP`, `336`, `D8`, fmtDate(member.effectiveDate));
-    if (member.planYearStart) seg(`DTP`, `356`, `D8`, fmtDate(member.planYearStart));
-    if (member.planYearEnd) seg(`DTP`, `357`, `D8`, fmtDate(member.planYearEnd));
+  // HD coverage
+  seg(["HD", "021", "", f.coverageType || "HLT", "", "IND"]);
+  seg(["DTP", "303", "D8", fmtDate(f.coverageEffectiveDate)]);
+  seg(["DTP", "348", "D8", fmtDate(f.coverageEffectiveDate)]);
+  if (f.premium) seg(["AMT", "P3", String(f.premium)]);
+  if (f.planId) seg(["REF", "CE", f.planId]);
+  if (f.billingArrangement) seg(["REF", "9V", f.billingArrangement]);
 
-    // NM1 — member name
-    seg(`NM1`, `IL`, `1`, member.lastName || ``, member.firstName || ``, ``, ``, ``, `34`, id);
+  // 2700 Loop
+  seg(["LS", "2700"]);
 
-    // PER — contact
-    if (member.phone || member.email) {
-      const parts = [`PER`, `IP`, ``];
-      if (member.phone) { parts.push(`HP`); parts.push(member.phone.replace(/\D/g, "")); }
-      if (member.email) { parts.push(`EM`); parts.push(member.email); }
-      seg(...parts);
-    }
+  seg(["LX", "1"]);
+  seg(["N1", "75", "REQUEST SUBMIT TIMESTAMP"]);
+  seg(["REF", "17", ts]);
 
-    // N3 / N4 — address
-    if (member.address1) {
-      seg(`N3`, member.address1 + (member.address2 ? ` ${member.address2}` : ``));
-      seg(`N4`, member.city || ``, member.state || ``, member.zip || ``);
-    }
+  seg(["LX", "2"]);
+  seg(["N1", "75", "SOURCE EXCHANGE ID"]);
+  seg(["REF", "17", f.sourceExchangeId || ""]);
 
-    // DMG — demographics
-    if (member.dob || member.gender) {
-      seg(`DMG`, `D8`, fmtDate(member.dob) || ``, member.gender || ``);
-    }
+  seg(["LX", "3"]);
+  seg(["N1", "75", "ISFFM"]);
+  seg(["REF", "17", f.isFFM || "false"]);
 
-    // HD + DTP per coverage
-    for (const cov of (member.coverages || [])) {
-      const covLevel = cov.coverageLevel || (isSubscriber ? "IND" : "DEP");
-      seg(`HD`, transactionType, ``, cov.type || `HLT`, cov.planId || ``, covLevel);
-      if (cov.effectiveDate) seg(`DTP`, `303`, `D8`, fmtDate(cov.effectiveDate));
-      if (cov.effectiveDate) seg(`DTP`, `348`, `D8`, fmtDate(cov.effectiveDate));
-      if (cov.termDate) seg(`DTP`, `349`, `D8`, fmtDate(cov.termDate));
-      if (cov.premium) seg(`AMT`, `P3`, String(cov.premium));
-      if (cov.planId) seg(`REF`, `CE`, cov.planId);
-    }
-  };
+  seg(["LX", "4"]);
+  seg(["N1", "75", "PRE AMT TOT"]);
+  seg(["REF", "9X", String(f.preAmtTot || f.premium || "")]);
+  seg(["DTP", "007", "D8", fmtDate(f.coverageEffectiveDate)]);
 
-  emitMember(subscriber, true);
-  for (const dep of dependents) {
-    emitMember(dep, false);
-  }
+  seg(["LX", "5"]);
+  seg(["N1", "75", "PRE AMT 1"]);
+  seg(["REF", "9X", String(f.preAmt1 || f.premium || "")]);
+  seg(["DTP", "007", "D8", fmtDate(f.coverageEffectiveDate)]);
+
+  seg(["LX", "6"]);
+  seg(["N1", "75", "TOT RES AMT"]);
+  seg(["REF", "9V", String(f.totResAmt || f.premium || "")]);
+  seg(["DTP", "007", "D8", fmtDate(f.coverageEffectiveDate)]);
+
+  seg(["LX", "7"]);
+  seg(["N1", "75", "RATING AREA"]);
+  seg(["REF", "9X", f.ratingArea || ""]);
+  seg(["DTP", "007", "D8", fmtDate(f.coverageEffectiveDate)]);
+
+  seg(["LX", "8"]);
+  seg(["N1", "75", "SEP REASON"]);
+  seg(["REF", "17", f.sepReason || "AI"]);
+  seg(["DTP", "007", "D8", fmtDate(f.coverageEffectiveDate)]);
+
+  seg(["LX", "9"]);
+  seg(["N1", "75", "ICHRA/QSEHRA"]);
+  seg(["REF", "17", f.ichraQsehra || "N"]);
+
+  seg(["LX", "10"]);
+  seg(["N1", "75", "QSEHRA Spouse"]);
+  seg(["REF", "17", f.qsehraSpouse || "N"]);
+
+  seg(["LX", "11"]);
+  seg(["N1", "75", "QSEHRA Both"]);
+  seg(["REF", "17", f.qsehraBoth || "N"]);
+
+  seg(["LE", "2700"]);
 
   // SE
-  seg(`SE`, String(segCount + 1), stNum); // +1 for SE itself
+  seg(["SE", String(segCount + 1), stCtl]);
 
-  lines.push(`GE*1*1~`);
-  lines.push(`IEA*1*${ctlNum}~`);
+  segs.push("GE*1*1~");
+  segs.push(`IEA*1*${ctlNum}~`);
 
-  return lines.join("\n");
+  return segs.join("\n");
 }
 
-// Transaction type options for the form
-export const TRANSACTION_TYPES = [
-  { value: "021", label: "021 — New Enrollment" },
-  { value: "024", label: "024 — Termination" },
-  { value: "001", label: "001 — Change / Add Dependent" },
+export const SEP_REASONS = [
+  { value: "AI", label: "AI — Initial / New SEP" },
+  { value: "AE", label: "AE — Loss of Coverage" },
+  { value: "AB", label: "AB — Marriage" },
+  { value: "17", label: "17 — Birth / Adoption" },
+  { value: "EC", label: "EC — Relocation" },
+  { value: "QE", label: "QE — Other" },
 ];
 
 export const COVERAGE_TYPES = [
@@ -168,18 +181,3 @@ export const COVERAGE_TYPES = [
   { value: "DEN", label: "DEN — Dental" },
   { value: "VIS", label: "VIS — Vision" },
 ];
-
-export const MAINTENANCE_REASONS = {
-  "021": [
-    { value: "AI", label: "AI — Initial Enrollment" },
-    { value: "XN", label: "XN — Special Enrollment Period" },
-  ],
-  "024": [
-    { value: "4N", label: "4N — Termination of Benefits" },
-    { value: "AB", label: "AB — Disenrollment" },
-  ],
-  "001": [
-    { value: "AI", label: "AI — Change" },
-    { value: "EC", label: "EC — Add Dependent" },
-  ],
-};
