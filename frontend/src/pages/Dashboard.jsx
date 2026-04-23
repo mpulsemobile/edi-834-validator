@@ -612,6 +612,11 @@ export default function Dashboard() {
                     {parsed.broker.idCode && ` (${parsed.broker.idCodeQualifier}: ${parsed.broker.idCode})`}
                   </span>
                 )}
+                {parsed.interchange?.controlNumber && (
+                  <span style={styles.badge}>
+                    Interchange Control #: {parsed.interchange.controlNumber}
+                  </span>
+                )}
                 <span style={styles.badge}>
                   Version: {parsed.group.version || "N/A"}
                 </span>

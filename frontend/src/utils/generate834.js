@@ -30,7 +30,7 @@ export function generateSepOffExchange(f) {
   const ts = nowTimestamp();
   const dateStr = nowDate();
   const timeStr = nowTime();
-  const ctlNum = String(Date.now()).slice(-9).padStart(9, "0");
+  const ctlNum = f.interchangeControlNum || String(Date.now()).slice(-9).padStart(9, "0");
   const stCtl = f.stControlNum || "26504";
 
   const segs = [];

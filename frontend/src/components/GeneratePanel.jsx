@@ -68,6 +68,8 @@ const defaultForm = {
   payerName: "", payerEin: "",
   // Broker (N1*BO) — optional
   brokerName: "", brokerId: "",
+  // Interchange
+  interchangeControlNum: "",
   // Subscriber ID refs
   subscriberId: "", groupNumber: "", exchangeMemberId: "", refCode6O: "",
   // Dates
@@ -157,6 +159,12 @@ export default function GeneratePanel({ onClose, onLoad }) {
             </ul>
           </div>
         )}
+
+        {/* ── Interchange ── */}
+        <div style={s.sectionTitle}>Interchange (ISA)</div>
+        <div style={s.grid2}>
+          <Field label="Interchange Control Number (ISA-13)">{inp("interchangeControlNum", { placeholder: "e.g. 977114579", maxLength: 9 })}</Field>
+        </div>
 
         {/* ── Sponsor & Payer (N1*P5, N1*IN) ── */}
         <div style={s.sectionTitle}>Sponsor (N1*P5) &amp; Payer (N1*IN)</div>
