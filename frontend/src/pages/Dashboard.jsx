@@ -43,13 +43,15 @@ IEA*1*000000001~`;
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f8fafc",
-    padding: "32px",
-    fontFamily: "Arial, sans-serif",
+    background: "#f1f5f9",
+    fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
     color: "#0f172a",
   },
+  pageBody: {
+    padding: "32px 32px",
+  },
   container: {
-    maxWidth: "1400px",
+    maxWidth: "100%",
     margin: "0 auto",
   },
   headerRow: {
@@ -58,16 +60,22 @@ const styles = {
     alignItems: "flex-start",
     gap: "16px",
     flexWrap: "wrap",
-    marginBottom: "24px",
+    marginBottom: "28px",
+    background: "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%)",
+    borderRadius: "20px",
+    padding: "28px 32px",
+    color: "white",
   },
   title: {
     margin: 0,
     fontSize: "32px",
-    fontWeight: 700,
+    fontWeight: 800,
+    color: "white",
+    letterSpacing: "-0.5px",
   },
   subtitle: {
     margin: "8px 0 0 0",
-    color: "#475569",
+    color: "#bfdbfe",
     fontSize: "15px",
   },
   actionRow: {
@@ -77,25 +85,26 @@ const styles = {
     marginTop: "8px",
   },
   secondaryButton: {
-    background: "white",
-    color: "#0f172a",
-    border: "1px solid #cbd5e1",
+    background: "rgba(255,255,255,0.15)",
+    color: "white",
+    border: "1px solid rgba(255,255,255,0.35)",
     borderRadius: "12px",
-    padding: "10px 16px",
+    padding: "10px 18px",
     fontSize: "14px",
     cursor: "pointer",
     fontWeight: 600,
   },
   uploadLabel: {
     display: "inline-block",
-    background: "white",
-    color: "#0f172a",
-    border: "1px solid #cbd5e1",
+    background: "#2563eb",
+    color: "white",
+    border: "1px solid #1d4ed8",
     borderRadius: "12px",
-    padding: "10px 16px",
+    padding: "10px 18px",
     fontSize: "14px",
     cursor: "pointer",
     fontWeight: 600,
+    boxShadow: "0 2px 8px rgba(37,99,235,0.45)",
   },
   cardGrid: {
     display: "grid",
@@ -106,31 +115,37 @@ const styles = {
   card: {
     background: "white",
     border: "1px solid #e2e8f0",
-    borderRadius: "18px",
-    padding: "18px",
-    boxShadow: "0 2px 10px rgba(15, 23, 42, 0.05)",
+    borderRadius: "16px",
+    padding: "20px 22px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
   },
   cardLabel: {
-    fontSize: "13px",
+    fontSize: "12px",
     color: "#64748b",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
     marginBottom: "8px",
   },
   cardValue: {
     fontSize: "28px",
-    fontWeight: 700,
+    fontWeight: 800,
+    color: "#0f172a",
   },
   section: {
     background: "white",
     border: "1px solid #e2e8f0",
-    borderRadius: "18px",
-    padding: "20px",
+    borderRadius: "16px",
+    padding: "24px",
     marginBottom: "20px",
-    boxShadow: "0 2px 10px rgba(15, 23, 42, 0.05)",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
   },
   sectionTitle: {
     margin: "0 0 16px 0",
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: 700,
+    color: "#1e3a5f",
+    letterSpacing: "-0.2px",
   },
   muted: {
     color: "#64748b",
@@ -234,19 +249,20 @@ const styles = {
     marginBottom: "20px",
   },
   select: {
-    padding: "10px 12px",
+    padding: "10px 14px",
     borderRadius: "12px",
-    border: "1px solid #cbd5e1",
+    border: "1px solid rgba(255,255,255,0.35)",
     fontSize: "14px",
     cursor: "pointer",
     fontWeight: 600,
-    background: "white",
-    color: "#0f172a",
+    background: "rgba(255,255,255,0.15)",
+    color: "white",
+    minWidth: "260px",
   },
 };
 
 const SCENARIOS = [
-  { value: "", label: "Load Scenario..." },
+  { value: "", label: "Load Sample Scenario..." },
   // SEP Off-Exchange — Subscriber Only (Green)
   { value: "/sample-data/01-sep-off-exchange-subscriber-only-medical.edi", label: "01 — SEP New Enrollment: Subscriber Only — Medical" },
   { value: "/sample-data/02-sep-off-exchange-subscriber-only-vision.edi", label: "02 — SEP New Enrollment: Subscriber Only — Vision" },
@@ -412,18 +428,20 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
-      {/* PHI Banner */}
+      {/* PHI Banner — full-width, outside padded container */}
       <div style={{
-        backgroundColor: "#fef3c7",
-        borderBottom: "1px solid #fbbf24",
-        padding: "8px 24px",
-        fontSize: "12px",
-        color: "#92400e",
+        backgroundColor: "#fffbeb",
+        borderBottom: "2px solid #f59e0b",
+        padding: "10px 32px",
+        fontSize: "12.5px",
+        color: "#78350f",
         display: "flex",
         alignItems: "center",
+        justifyContent: "center",
         gap: "8px",
+        textAlign: "center",
       }}>
-        <span style={{ fontSize: "14px" }}>⚠️</span>
+        <span style={{ fontSize: "15px" }}>⚠️</span>
         <span>
           <strong>Browser-only tool — no data is transmitted or stored.</strong>{" "}
           Do not upload files containing real member PHI/PII to shared or public environments.
@@ -431,6 +449,7 @@ export default function Dashboard() {
         </span>
       </div>
 
+      <div style={styles.pageBody}>
       <div style={styles.container}>
         <div style={styles.headerRow}>
           <div>
@@ -438,16 +457,12 @@ export default function Dashboard() {
             <p style={styles.subtitle}>
               Upload, parse, and review enrollment files with validation-friendly output.
             </p>
-            <p style={{ fontSize: "11px", color: "#94a3b8", margin: "4px 0 0" }}>
+            <p style={{ fontSize: "11px", color: "rgba(191,219,254,0.8)", margin: "6px 0 0" }}>
               Code tables aligned to: CMS FFE X12 834 Companion Guide v7.2 (Aug 2024) &amp; Covered California Companion Guide v24.09.06
             </p>
           </div>
 
           <div style={styles.actionRow}>
-            <button style={styles.secondaryButton} onClick={handleLoadSample}>
-              Load Sample 834
-            </button>
-
             <select style={styles.select} onChange={handleLoadScenario} defaultValue="">
               {SCENARIOS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -455,7 +470,7 @@ export default function Dashboard() {
             </select>
 
             <label style={styles.uploadLabel}>
-              Upload 834 File
+              Upload your 834 File
               <input
                 type="file"
                 accept=".txt,.edi,.x12"
@@ -966,6 +981,7 @@ export default function Dashboard() {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );
