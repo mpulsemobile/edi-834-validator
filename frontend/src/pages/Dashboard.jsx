@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { parse834, formatDate } from "../utils/parse834";
 import { exportMembersToCSV } from "../utils/csvExport";
-import GeneratePanel from "../components/GeneratePanel";
-import GenerateAddSpousePanel from "../components/GenerateAddSpousePanel";
+import Generate834Modal from "../components/Generate834Modal";
 import {
   getRelationshipLabel,
   getRaceEthnicityLabels,
@@ -282,6 +281,14 @@ const SCENARIOS = [
   { value: `${BASE}/sample-data/10-add-spouse-subscriber-and-spouse-medical.edi`, label: "10 — Add Spouse: New Subscriber + Spouse — Medical" },
   { value: `${BASE}/sample-data/11-add-spouse-subscriber-and-spouse-dental.edi`, label: "11 — Add Spouse: New Subscriber + Spouse — Dental" },
   { value: `${BASE}/sample-data/12-add-spouse-subscriber-and-spouse-vision.edi`, label: "12 — Add Spouse: New Subscriber + Spouse — Vision" },
+  // Add Dependent to Subscriber and Spouse
+  { value: `${BASE}/sample-data/13-add-dependent-to-subscriber-and-spouse.edi`, label: "13 — Add Dependent to Subscriber + Spouse" },
+  // New Enrollment — Subscriber, Spouse, and Dependent
+  { value: `${BASE}/sample-data/14-new-enrollment-subscriber-spouse-dependent.edi`, label: "14 — New Enrollment: Subscriber + Spouse + Dependent" },
+  // New Enrollment — Subscriber, Spouse, Dependent (Multi-Coverage)
+  { value: `${BASE}/sample-data/15B-new-enrollment-subscriber-spouse-dependent-medical.edi`, label: "15B — New Enrollment: Subscriber + Spouse + Dependent — Medical" },
+  { value: `${BASE}/sample-data/15A-new-enrollment-subscriber-spouse-dependent-dental.edi`, label: "15A — New Enrollment: Subscriber + Spouse + Dependent — Dental" },
+  { value: `${BASE}/sample-data/15C-new-enrollment-subscriber-spouse-dependent-vision.edi`, label: "15C — New Enrollment: Subscriber + Spouse + Dependent — Vision" },
 ];
 
 function getMemberIssues(member) {
@@ -298,6 +305,105 @@ function getEnrollmentSummary(parsed) {
   const subscriber =
     parsed.members.find((member) => member.isSubscriber) || parsed.members[0];
   return subscriber?.financials?.summary || null;
+}
+
+function generateEdiSummary(parsed) {
+  if (!parsed?.members?.length) return null;
+
+  const members = parsed.members;
+  const additions = members.filter((m) => m.maintenanceTypeCode === "021");
+  const cancelTerms = members.filter((m) => m.maintenanceTypeCode === "024");
+  const changes = members.filter((m) => m.maintenanceTypeCode === "001");
+
+  const fmtDate = (raw) => {
+    if (!raw || raw.length < 8) return "N/A";
+    return `${raw.slice(4, 6)}/${raw.slice(6, 8)}/${raw.slice(0, 4)}`;
+  };
+
+  const getName = (m) =>
+    [m.firstName, m.lastName].filter(Boolean).join(" ") || "Member";
+
+  const getPrimaryCov = (m) => m.coverages?.[0] || null;
+
+  const getCovType = (cov) => cov?.insuranceLineCode || "Unknown";
+
+  const getCovDate = (cov, dateKey) => fmtDate(cov?.dates?.[dateKey]);
+
+  const isCancelAction = (m) => {
+    const cancelReasons = ["14", "59", "29", "AI"];
+    return cancelReasons.includes(m.maintenanceReasonCode);
+  };
+
+  const buildNameList = (memberList) => {
+    const entries = memberList.map((m) => {
+      const rel = getRelationshipLabel(m.relationshipCode, m.isSubscriber);
+      return `${rel} ${getName(m)}`;
+    });
+    if (entries.length === 1) return entries[0];
+    return entries.slice(0, -1).join(", ") + " and " + entries[entries.length - 1];
+  };
+
+  // Rule 2: Mixed — Change + Addition/Cancellation; the non-Change is the main intention
+  if (changes.length > 0 && (additions.length > 0 || cancelTerms.length > 0)) {
+    if (additions.length > 0) {
+      const cov = getPrimaryCov(additions[0]);
+      const covType = getCovType(cov);
+      const date = getCovDate(cov, "348");
+      const nameList = buildNameList(additions);
+      return `This 834 is adding ${nameList} to this policy, with Benefit Begin Date of ${date} for coverage ${covType}.`;
+    }
+    if (cancelTerms.length > 0) {
+      const m = cancelTerms[0];
+      const cov = getPrimaryCov(m);
+      const covType = getCovType(cov);
+      const date = getCovDate(cov, "349");
+      const action = isCancelAction(m) ? "cancelling" : "terminating";
+      const rel = getRelationshipLabel(m.relationshipCode, m.isSubscriber);
+      const name = getName(m);
+      if (m.isSubscriber) {
+        return `This 834 is ${action} the entire policy, with Benefit End Date of ${date} for coverage ${covType}.`;
+      }
+      return `This 834 is ${action} ${name} who is a ${rel} to this policy, with Benefit End Date of ${date} for coverage ${covType}.`;
+    }
+  }
+
+  // Rule 3: Only Additions
+  if (additions.length > 0 && cancelTerms.length === 0 && changes.length === 0) {
+    const cov = getPrimaryCov(additions[0]);
+    const covType = getCovType(cov);
+    const date = getCovDate(cov, "348");
+    const nameList = buildNameList(additions);
+    return `This 834 is adding ${nameList}, with Benefit Begin Date of ${date} for coverage ${covType}.`;
+  }
+
+  // Only Cancellations/Terminations (no Change, no Addition)
+  if (cancelTerms.length > 0 && additions.length === 0 && changes.length === 0) {
+    const m = cancelTerms[0];
+    const cov = getPrimaryCov(m);
+    const covType = getCovType(cov);
+    const date = getCovDate(cov, "349");
+    const action = isCancelAction(m) ? "cancelling" : "terminating";
+    const rel = getRelationshipLabel(m.relationshipCode, m.isSubscriber);
+    const name = getName(m);
+    if (m.isSubscriber) {
+      return `This 834 is ${action} the entire policy, with Benefit End Date of ${date} for coverage ${covType}.`;
+    }
+    return `This 834 is ${action} ${name} who is a ${rel} to this policy, with Benefit End Date of ${date} for coverage ${covType}.`;
+  }
+
+  // Rule 1: Only Changes
+  if (changes.length > 0 && additions.length === 0 && cancelTerms.length === 0) {
+    const subscriber = changes.find((m) => m.isSubscriber) || changes[0];
+    const cov = getPrimaryCov(subscriber);
+    const covType = getCovType(cov);
+    const date = getCovDate(cov, "348");
+    if (cov?.cmsPlanId) {
+      return `This 834 is changing the Plan ID of the Subscriber, with Benefit Begin Date of ${date} for coverage ${covType}.`;
+    }
+    return `This 834 is changing enrollment data for the Subscriber, with Benefit Begin Date of ${date} for coverage ${covType}.`;
+  }
+
+  return null;
 }
 
 function TraceTooltip({ trace }) {
@@ -356,8 +462,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
-  const [showGenerate, setShowGenerate] = useState(false);
-  const [showGenerateSpouse, setShowGenerateSpouse] = useState(false);
+  const [showGenerate834, setShowGenerate834] = useState(false);
 
   const handleGeneratedEdi = (ediText, name) => {
     try {
@@ -443,6 +548,7 @@ export default function Dashboard() {
   const subscribers = parsed?.members.filter((m) => m.isSubscriber).length || 0;
   const dependents = parsed?.members.filter((m) => !m.isSubscriber).length || 0;
   const enrollmentSummary = getEnrollmentSummary(parsed);
+  const ediSummary = generateEdiSummary(parsed);
 
   return (
     <div style={styles.page}>
@@ -487,22 +593,12 @@ export default function Dashboard() {
               ))}
             </select>
 
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <select
-                style={{ ...styles.select, minWidth: "200px" }}
-                defaultValue=""
-                onChange={e => {
-                  const v = e.target.value;
-                  e.target.value = "";
-                  if (v === "sep") setShowGenerate(true);
-                  if (v === "spouse") setShowGenerateSpouse(true);
-                }}
-              >
-                <option value="" disabled>✦ Create EDI...</option>
-                <option value="sep">SEP Subscriber</option>
-                <option value="spouse">Add Spouse to Subscriber</option>
-              </select>
-            </div>
+            <button
+              style={styles.secondaryButton}
+              onClick={() => setShowGenerate834(true)}
+            >
+              ✦ Generate 834
+            </button>
 
             <label style={styles.uploadLabel}>
               Upload your 834 File
@@ -516,16 +612,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {showGenerate && (
-          <GeneratePanel
-            onClose={() => setShowGenerate(false)}
-            onLoad={handleGeneratedEdi}
-          />
-        )}
-
-        {showGenerateSpouse && (
-          <GenerateAddSpousePanel
-            onClose={() => setShowGenerateSpouse(false)}
+        {showGenerate834 && (
+          <Generate834Modal
+            onClose={() => setShowGenerate834(false)}
             onLoad={handleGeneratedEdi}
           />
         )}
@@ -577,37 +666,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {parsed && parsed.validation.unrecognizedSegments?.length > 0 && (
-          <div style={{ ...styles.section, borderLeft: "4px solid #f59e0b" }}>
-            <h2 style={{ ...styles.sectionTitle, color: "#92400e" }}>Unrecognized Segments</h2>
-            <p style={{ ...styles.muted, marginBottom: "12px" }}>
-              These segments were present in the file but not handled by the parser. They are shown here for inspection.
-            </p>
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>#</th>
-                    <th style={styles.th}>Segment ID</th>
-                    <th style={styles.th}>Raw Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsed.validation.unrecognizedSegments.map((seg, i) => (
-                    <tr key={i}>
-                      <td style={styles.td}>{i + 1}</td>
-                      <td style={{ ...styles.td, fontWeight: 700 }}>{seg.split("*")[0]}</td>
-                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: "12px", color: "#475569" }}>{seg}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {parsed && (
           <>
+            {ediSummary && (
+              <div style={{
+                ...styles.section,
+                background: "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)",
+                borderLeft: "4px solid #2563eb",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "6px",
+              }}>
+                <h2 style={{ ...styles.sectionTitle, marginBottom: "2px", color: "#1e3a5f" }}>Summary</h2>
+                <p style={{ margin: 0, fontSize: "15px", color: "#1e293b", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                  {ediSummary}
+                </p>
+              </div>
+            )}
+
             <div style={styles.section}>
               <h2 style={styles.sectionTitle}>Transaction Details</h2>
               <div style={styles.infoRow}>
@@ -1067,13 +1145,42 @@ export default function Dashboard() {
             )}
 
             <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Structured JSON</h2>
-              <pre style={styles.pre}>{JSON.stringify(parsed, null, 2)}</pre>
-            </div>
-
-            <div style={styles.section}>
               <h2 style={styles.sectionTitle}>Raw File</h2>
               <pre style={styles.rawPre}>{rawText}</pre>
+            </div>
+
+            {parsed.validation.unrecognizedSegments?.length > 0 && (
+              <div style={{ ...styles.section, borderLeft: "4px solid #f59e0b" }}>
+                <h2 style={{ ...styles.sectionTitle, color: "#92400e" }}>Unrecognized Segments</h2>
+                <p style={{ ...styles.muted, marginBottom: "12px" }}>
+                  These segments were present in the file but not handled by the parser. They are shown here for inspection.
+                </p>
+                <div style={styles.tableWrap}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>#</th>
+                        <th style={styles.th}>Segment ID</th>
+                        <th style={styles.th}>Raw Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsed.validation.unrecognizedSegments.map((seg, i) => (
+                        <tr key={i}>
+                          <td style={styles.td}>{i + 1}</td>
+                          <td style={styles.td}>{seg.split("*")[0]}</td>
+                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: "12px", color: "#475569" }}>{seg}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Structured JSON</h2>
+              <pre style={styles.pre}>{JSON.stringify(parsed, null, 2)}</pre>
             </div>
           </>
         )}
