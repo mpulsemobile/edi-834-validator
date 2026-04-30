@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { parse834, formatDate } from "../utils/parse834";
 import { exportMembersToCSV } from "../utils/csvExport";
 import Generate834Modal from "../components/Generate834Modal";
+import CompareEdiModal from "../components/CompareEdiModal";
 import {
   getRelationshipLabel,
   getRaceEthnicityLabels,
@@ -463,6 +464,7 @@ export default function Dashboard() {
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
   const [showGenerate834, setShowGenerate834] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
 
   const handleGeneratedEdi = (ediText, name) => {
     try {
@@ -600,6 +602,13 @@ export default function Dashboard() {
               ✦ Generate 834
             </button>
 
+            <button
+              style={styles.secondaryButton}
+              onClick={() => setShowCompare(true)}
+            >
+              ⇄ Compare EDI
+            </button>
+
             <label style={styles.uploadLabel}>
               Upload your 834 File
               <input
@@ -617,6 +626,10 @@ export default function Dashboard() {
             onClose={() => setShowGenerate834(false)}
             onLoad={handleGeneratedEdi}
           />
+        )}
+
+        {showCompare && (
+          <CompareEdiModal onClose={() => setShowCompare(false)} />
         )}
 
         {error && (
