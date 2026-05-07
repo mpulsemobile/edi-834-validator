@@ -472,6 +472,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [showGenerate834, setShowGenerate834] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
+  const [profileOverride, setProfileOverride] = useState(""); // "" = auto-detect
 
   const handleGeneratedEdi = (ediText, name) => {
     try {
@@ -479,7 +480,7 @@ export default function Dashboard() {
       setSearch("");
       setFileName(name);
       setRawText(ediText);
-      setParsed(parse834(ediText));
+      setParsed(parse834(ediText, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to parse generated file.");
       setParsed(null);
@@ -508,7 +509,7 @@ export default function Dashboard() {
       setFileName(file.name);
       const text = await file.text();
       setRawText(text);
-      setParsed(parse834(text));
+      setParsed(parse834(text, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to parse uploaded file.");
       setParsed(null);
@@ -530,7 +531,7 @@ export default function Dashboard() {
       const text = await res.text();
       setFileName(name);
       setRawText(text);
-      setParsed(parse834(text));
+      setParsed(parse834(text, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to load scenario.");
       setParsed(null);
@@ -625,6 +626,25 @@ export default function Dashboard() {
                 style={{ display: "none" }}
               />
             </label>
+
+            <select
+              value={profileOverride}
+              onChange={(e) => setProfileOverride(e.target.value)}
+              title="Validation profile to apply — overrides auto-detection"
+              style={{
+                ...styles.select,
+                fontSize: "11px",
+                minWidth: "180px",
+                borderColor: profileOverride ? "#16a34a" : "#cbd5e1",
+                color: profileOverride ? "#166534" : "#475569",
+                background: profileOverride ? "#f0fdf4" : "#fff",
+              }}
+            >
+              <option value="">🔍 Profile: Auto-detect</option>
+              <option value="AP">A&amp;P / CMS FFE v7.2</option>
+              <option value="CHOICE_5010">CaliforniaChoice — HIPAA 5010</option>
+              <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010</option>
+            </select>
           </div>
         </div>
 

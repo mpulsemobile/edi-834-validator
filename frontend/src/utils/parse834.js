@@ -255,7 +255,7 @@ export function formatDate(raw) {
     return raw;
 }
 
-export function parse834(raw) {
+export function parse834(raw, profileOverride = null) {
     const { segments, componentSeparator } = parseX12(raw);
 
     const result = {
@@ -706,14 +706,19 @@ export function parse834(raw) {
     }
 
     // ── Profile Detection ─────────────────────────────────────────────────────
-    // Auto-detect validation profile from GS02 (sender) and GS08 (version string).
-    // CaliforniaChoice sends as GS02="CC". Version string distinguishes 4010 vs 5010.
+    // If a profileOverride is supplied by the caller, use it directly.
+    // Otherwise auto-detect from GS02 (sender) and GS08 (version string).
     {
-        const _sender = (result.group?.senderCode || "").trim().toUpperCase();
-        const _version = (result.group?.version || "").trim();
-        let _profileId = "AP";
-        if (_sender === "CC") {
-            _profileId = _version.startsWith("004") ? "CHOICE_4010" : "CHOICE_5010";
+        let _profileId;
+        if (profileOverride && ["AP", "CHOICE_5010", "CHOICE_4010"].includes(profileOverride)) {
+            _profileId = profileOverride;
+        } else {
+            const _sender = (result.group?.senderCode || "").trim().toUpperCase();
+            const _version = (result.group?.version || "").trim();
+            _profileId = "AP";
+            if (_sender === "CC") {
+                _profileId = _version.startsWith("004") ? "CHOICE_4010" : "CHOICE_5010";
+            }
         }
         result.profile = {
             id: _profileId,
@@ -723,9 +728,10 @@ export function parse834(raw) {
                     : _profileId === "CHOICE_5010"
                         ? "CaliforniaChoice — HIPAA 5010 (v1.12 / v1.5 / v1.6)"
                         : "A&P / CMS FFE v7.2",
-            detectedFrom:
-                _sender === "CC"
-                    ? `GS02=CC, GS08=${_version}`
+            detectedFrom: profileOverride
+                ? "manual selection"
+                : (result.group?.senderCode || "").trim().toUpperCase() === "CC"
+                    ? `GS02=CC, GS08=${result.group?.version || ""}`
                     : "default (GS02 ≠ CC)",
         };
     }
