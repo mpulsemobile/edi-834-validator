@@ -628,9 +628,6 @@ export default function Dashboard() {
 
             {/* Step 2: Load / Upload controls — enabled only once profile is chosen */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: profileOverride ? 1 : 0.4, pointerEvents: profileOverride ? "auto" : "none" }}>
-              <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
-                Step 2 — Load file:
-              </span>
               <select style={styles.select} onChange={handleLoadScenario} defaultValue="" disabled={!profileOverride}>
                 {SCENARIOS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
