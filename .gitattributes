@@ -1,0 +1,34 @@
+# .gitattributes — enforce consistent line endings across platforms
+# Prevents Windows CRLF conversion from corrupting EDI and binary files.
+
+# Default: normalize all text files to LF on commit
+* text=auto eol=lf
+
+# Explicitly LF — source files
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.sh    text eol=lf
+
+# EDI files MUST stay LF — CRLF breaks X12 segment parsing
+# (segment terminator is ~ and any \r will corrupt the file)
+*.edi   text eol=lf
+
+# Binary — never touch line endings
+*.pdf    binary
+*.xlsx   binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
