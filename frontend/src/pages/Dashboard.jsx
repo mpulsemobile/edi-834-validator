@@ -290,6 +290,12 @@ const SCENARIOS = [
   { value: `${BASE}/sample-data/15B-new-enrollment-subscriber-spouse-dependent-medical.edi`, label: "15B — New Enrollment: Subscriber + Spouse + Dependent — Medical" },
   { value: `${BASE}/sample-data/15A-new-enrollment-subscriber-spouse-dependent-dental.edi`, label: "15A — New Enrollment: Subscriber + Spouse + Dependent — Dental" },
   { value: `${BASE}/sample-data/15C-new-enrollment-subscriber-spouse-dependent-vision.edi`, label: "15C — New Enrollment: Subscriber + Spouse + Dependent — Vision" },
+  // Validation test files — intentionally invalid, used to verify warning output
+  { value: `${BASE}/sample-data/TEST-tier1-invalid-codes.edi`, label: "⚠ TEST: Tier 1 — Invalid Code-Set Values (INS-02/03/04)" },
+  { value: `${BASE}/sample-data/TEST-tier2-date-errors.edi`, label: "⚠ TEST: Tier 2 — Date Logic Errors (DOB in future, begin > end)" },
+  { value: `${BASE}/sample-data/TEST-structural-errors.edi`, label: "⚠ TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
+  { value: `${BASE}/sample-data/TEST-groupD-2750-errors.edi`, label: "⚠ TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
+  { value: `${BASE}/sample-data/TEST-field-format-errors.edi`, label: "⚠ TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
 ];
 
 function getMemberIssues(member) {
@@ -666,9 +672,19 @@ export default function Dashboard() {
             <div style={styles.cardValue}>{parsed?.validation.coverageCount || 0}</div>
           </div>
 
-          <div style={styles.card}>
-            <div style={styles.cardLabel}>Warnings</div>
-            <div style={styles.cardValue}>{parsed?.validation.warnings.length || 0}</div>
+          <div style={{
+            ...styles.card,
+            backgroundColor: parsed?.validation.warnings.length ? "#fefce8" : undefined,
+            borderColor: parsed?.validation.warnings.length ? "#facc15" : undefined,
+          }}>
+            <div style={{
+              ...styles.cardLabel,
+              color: parsed?.validation.warnings.length ? "#b91c1c" : undefined,
+            }}>Warnings</div>
+            <div style={{
+              ...styles.cardValue,
+              color: parsed?.validation.warnings.length ? "#b91c1c" : undefined,
+            }}>{parsed?.validation.warnings.length || 0}</div>
           </div>
 
           <div style={styles.card}>
@@ -696,6 +712,20 @@ export default function Dashboard() {
                 <p style={{ margin: 0, fontSize: "15px", color: "#1e293b", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
                   {ediSummary}
                 </p>
+              </div>
+            )}
+
+            {parsed.validation.warnings?.length > 0 && (
+              <div style={{ ...styles.section, borderLeft: "4px solid #ef4444" }}>
+                <h2 style={{ ...styles.sectionTitle, color: "#b91c1c" }}>Validation Warnings ({parsed.validation.warnings.length})</h2>
+                <p style={{ ...styles.muted, marginBottom: "12px" }}>
+                  These fields failed code-set or completeness checks. Review each member against the spec.
+                </p>
+                <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                  {parsed.validation.warnings.map((msg, i) => (
+                    <li key={i} style={{ fontFamily: "monospace", fontSize: "13px", color: "#7f1d1d", marginBottom: "6px" }}>{msg}</li>
+                  ))}
+                </ul>
               </div>
             )}
 
