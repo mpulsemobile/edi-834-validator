@@ -596,55 +596,70 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div style={styles.actionRow}>
-            <select style={styles.select} onChange={handleLoadScenario} defaultValue="">
-              {SCENARIOS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px" }}>
 
-            <button
-              style={styles.secondaryButton}
-              onClick={() => setShowGenerate834(true)}
-            >
-              ✦ Generate 834
-            </button>
+            {/* Step 1: Profile selection — always visible and required */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+                Step 1 — Validation Profile:
+              </span>
+              <select
+                value={profileOverride}
+                onChange={(e) => setProfileOverride(e.target.value)}
+                style={{
+                  ...styles.select,
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  minWidth: "240px",
+                  borderColor: profileOverride ? "#16a34a" : "#f59e0b",
+                  borderWidth: "2px",
+                  color: profileOverride ? "#166534" : "#92400e",
+                  background: profileOverride ? "#f0fdf4" : "#fffbeb",
+                }}
+              >
+                <option value="">— Select a profile to begin —</option>
+                <option value="AP">A&amp;P / CMS FFE v7.2</option>
+                <option value="CHOICE_5010">CaliforniaChoice — HIPAA 5010 (v1.12)</option>
+                <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010 (v1.11)</option>
+              </select>
+            </div>
 
-            <button
-              style={styles.secondaryButton}
-              onClick={() => setShowCompare(true)}
-            >
-              ⇄ Compare EDI
-            </button>
+            {/* Step 2: Load / Upload controls — enabled only once profile is chosen */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: profileOverride ? 1 : 0.4, pointerEvents: profileOverride ? "auto" : "none" }}>
+              <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+                Step 2 — Load file:
+              </span>
+              <select style={styles.select} onChange={handleLoadScenario} defaultValue="" disabled={!profileOverride}>
+                {SCENARIOS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
 
-            <label style={styles.uploadLabel}>
-              Upload your 834 File
-              <input
-                type="file"
-                accept=".txt,.edi,.x12"
-                onChange={handleFileUpload}
-                style={{ display: "none" }}
-              />
-            </label>
+              <button
+                style={styles.secondaryButton}
+                onClick={() => setShowGenerate834(true)}
+              >
+                ✦ Generate 834
+              </button>
 
-            <select
-              value={profileOverride}
-              onChange={(e) => setProfileOverride(e.target.value)}
-              title="Validation profile to apply — overrides auto-detection"
-              style={{
-                ...styles.select,
-                fontSize: "11px",
-                minWidth: "180px",
-                borderColor: profileOverride ? "#16a34a" : "#cbd5e1",
-                color: profileOverride ? "#166534" : "#475569",
-                background: profileOverride ? "#f0fdf4" : "#fff",
-              }}
-            >
-              <option value="">🔍 Profile: Auto-detect</option>
-              <option value="AP">A&amp;P / CMS FFE v7.2</option>
-              <option value="CHOICE_5010">CaliforniaChoice — HIPAA 5010</option>
-              <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010</option>
-            </select>
+              <button
+                style={styles.secondaryButton}
+                onClick={() => setShowCompare(true)}
+              >
+                ⇄ Compare EDI
+              </button>
+
+              <label style={{ ...styles.uploadLabel, cursor: profileOverride ? "pointer" : "not-allowed" }}>
+                Upload your 834 File
+                <input
+                  type="file"
+                  accept=".txt,.edi,.x12"
+                  onChange={handleFileUpload}
+                  disabled={!profileOverride}
+                  style={{ display: "none" }}
+                />
+              </label>
+            </div>
           </div>
         </div>
 
