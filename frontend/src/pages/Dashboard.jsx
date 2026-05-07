@@ -296,6 +296,8 @@ const SCENARIOS = [
   { value: `${BASE}/sample-data/TEST-structural-errors.edi`, label: "⚠ TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
   { value: `${BASE}/sample-data/TEST-groupD-2750-errors.edi`, label: "⚠ TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
   { value: `${BASE}/sample-data/TEST-field-format-errors.edi`, label: "⚠ TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
+  { value: `${BASE}/sample-data/TEST-choice-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 HIPAA — Anthem BlueCross HMO (subscriber + spouse)" },
+  { value: `${BASE}/sample-data/TEST-choice-5010-nohipaa-metlife.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 Non-HIPAA — MetLife Dental/Vision (subscriber + spouse)" },
 ];
 
 function getMemberIssues(member) {
@@ -471,6 +473,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [showGenerate834, setShowGenerate834] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
+  const [profileOverride, setProfileOverride] = useState(""); // "" = auto-detect
 
   const handleGeneratedEdi = (ediText, name) => {
     try {
@@ -478,7 +481,7 @@ export default function Dashboard() {
       setSearch("");
       setFileName(name);
       setRawText(ediText);
-      setParsed(parse834(ediText));
+      setParsed(parse834(ediText, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to parse generated file.");
       setParsed(null);
@@ -507,7 +510,7 @@ export default function Dashboard() {
       setFileName(file.name);
       const text = await file.text();
       setRawText(text);
-      setParsed(parse834(text));
+      setParsed(parse834(text, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to parse uploaded file.");
       setParsed(null);
@@ -529,7 +532,7 @@ export default function Dashboard() {
       const text = await res.text();
       setFileName(name);
       setRawText(text);
-      setParsed(parse834(text));
+      setParsed(parse834(text, profileOverride || null));
     } catch (err) {
       setError(err.message || "Failed to load scenario.");
       setParsed(null);
@@ -594,36 +597,71 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div style={styles.actionRow}>
-            <select style={styles.select} onChange={handleLoadScenario} defaultValue="">
-              {SCENARIOS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px" }}>
 
-            <button
-              style={styles.secondaryButton}
-              onClick={() => setShowGenerate834(true)}
-            >
-              ✦ Generate 834
-            </button>
+            {/* Step 1: Profile selection — always visible and required */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+                Step 1 — Validation Profile:
+              </span>
+              <select
+                value={profileOverride}
+                onChange={(e) => setProfileOverride(e.target.value)}
+                style={{
+                  ...styles.select,
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  minWidth: "240px",
+                  borderColor: profileOverride ? "#16a34a" : "#f59e0b",
+                  borderWidth: "2px",
+                  color: profileOverride ? "#166534" : "#92400e",
+                  background: profileOverride ? "#f0fdf4" : "#fffbeb",
+                }}
+              >
+                <option value="">— Select a profile to begin —</option>
+                <option value="AP">A&amp;P / CMS FFE v7.2</option>
+                <option value="CHOICE_5010_HIPAA">CaliforniaChoice — HIPAA 5010 (v1.12 — Anthem/Oscar/Sharp/Sutter…)</option>
+                <option value="CHOICE_5010_NOHIPAA">CaliforniaChoice — Non-HIPAA 5010 (v1.5/v1.6 — MetLife/Western Health/United Health)</option>
+                <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010 (v1.11 — Kaiser/Landmark)</option>
+              </select>
+            </div>
 
-            <button
-              style={styles.secondaryButton}
-              onClick={() => setShowCompare(true)}
-            >
-              ⇄ Compare EDI
-            </button>
+            {/* Step 2: Load / Upload controls — enabled only once profile is chosen */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: profileOverride ? 1 : 0.4, pointerEvents: profileOverride ? "auto" : "none" }}>
+              <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+                Step 2 — Load file:
+              </span>
+              <select style={styles.select} onChange={handleLoadScenario} defaultValue="" disabled={!profileOverride}>
+                {SCENARIOS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
 
-            <label style={styles.uploadLabel}>
-              Upload your 834 File
-              <input
-                type="file"
-                accept=".txt,.edi,.x12"
-                onChange={handleFileUpload}
-                style={{ display: "none" }}
-              />
-            </label>
+              <button
+                style={styles.secondaryButton}
+                onClick={() => setShowGenerate834(true)}
+              >
+                ✦ Generate 834
+              </button>
+
+              <button
+                style={styles.secondaryButton}
+                onClick={() => setShowCompare(true)}
+              >
+                ⇄ Compare EDI
+              </button>
+
+              <label style={{ ...styles.uploadLabel, cursor: profileOverride ? "pointer" : "not-allowed" }}>
+                Upload your 834 File
+                <input
+                  type="file"
+                  accept=".txt,.edi,.x12"
+                  onChange={handleFileUpload}
+                  disabled={!profileOverride}
+                  style={{ display: "none" }}
+                />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -697,6 +735,26 @@ export default function Dashboard() {
 
         {parsed && (
           <>
+            {/* Validation Profile Badge */}
+            {parsed.profile && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "12px",
+                color: parsed.profile.id === "AP" ? "#1d4ed8" : "#166534",
+                background: parsed.profile.id === "AP" ? "#eff6ff" : "#f0fdf4",
+                border: `1px solid ${parsed.profile.id === "AP" ? "#bfdbfe" : "#bbf7d0"}`,
+                borderRadius: "6px",
+                padding: "6px 14px",
+                marginBottom: "8px",
+              }}>
+                <span>🔍</span>
+                <span><strong>Validation Profile:</strong> {parsed.profile.label}</span>
+                <span style={{ color: "#9ca3af", marginLeft: "4px" }}>— detected from {parsed.profile.detectedFrom}</span>
+              </div>
+            )}
+
             {ediSummary && (
               <div style={{
                 ...styles.section,
@@ -719,7 +777,7 @@ export default function Dashboard() {
               <div style={{ ...styles.section, borderLeft: "4px solid #ef4444" }}>
                 <h2 style={{ ...styles.sectionTitle, color: "#b91c1c" }}>Validation Warnings ({parsed.validation.warnings.length})</h2>
                 <p style={{ ...styles.muted, marginBottom: "12px" }}>
-                  These fields failed code-set or completeness checks. Review each member against the spec.
+                  These fields failed code-set or completeness checks. Review each member against the <strong>{parsed.profile?.label || "companion guide"}</strong> spec.
                 </p>
                 <ul style={{ margin: 0, paddingLeft: "20px" }}>
                   {parsed.validation.warnings.map((msg, i) => (
