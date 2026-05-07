@@ -3,9 +3,12 @@
 __pycache__/
 *.pyc
 
-# Companion guide documents (do not commit)
+# Companion guide documents (do not commit by default)
+# Exception: docs/companion-guides/ is explicitly allowed (public reference docs)
 **/*.pdf
 **/*.docx
+!docs/companion-guides/*.pdf
+!docs/companion-guides/*.docx
 
 # macOS
 .DS_Store

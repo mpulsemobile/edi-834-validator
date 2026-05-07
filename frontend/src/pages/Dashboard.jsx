@@ -296,6 +296,7 @@ const SCENARIOS = [
   { value: `${BASE}/sample-data/TEST-structural-errors.edi`, label: "⚠ TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
   { value: `${BASE}/sample-data/TEST-groupD-2750-errors.edi`, label: "⚠ TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
   { value: `${BASE}/sample-data/TEST-field-format-errors.edi`, label: "⚠ TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
+  { value: `${BASE}/sample-data/TEST-choice-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 — Anthem BlueCross HMO (subscriber + spouse)" },
 ];
 
 function getMemberIssues(member) {
@@ -697,6 +698,26 @@ export default function Dashboard() {
 
         {parsed && (
           <>
+            {/* Validation Profile Badge */}
+            {parsed.profile && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "12px",
+                color: parsed.profile.id === "AP" ? "#1d4ed8" : "#166534",
+                background: parsed.profile.id === "AP" ? "#eff6ff" : "#f0fdf4",
+                border: `1px solid ${parsed.profile.id === "AP" ? "#bfdbfe" : "#bbf7d0"}`,
+                borderRadius: "6px",
+                padding: "6px 14px",
+                marginBottom: "8px",
+              }}>
+                <span>🔍</span>
+                <span><strong>Validation Profile:</strong> {parsed.profile.label}</span>
+                <span style={{ color: "#9ca3af", marginLeft: "4px" }}>— detected from {parsed.profile.detectedFrom}</span>
+              </div>
+            )}
+
             {ediSummary && (
               <div style={{
                 ...styles.section,
@@ -719,7 +740,7 @@ export default function Dashboard() {
               <div style={{ ...styles.section, borderLeft: "4px solid #ef4444" }}>
                 <h2 style={{ ...styles.sectionTitle, color: "#b91c1c" }}>Validation Warnings ({parsed.validation.warnings.length})</h2>
                 <p style={{ ...styles.muted, marginBottom: "12px" }}>
-                  These fields failed code-set or completeness checks. Review each member against the spec.
+                  These fields failed code-set or completeness checks. Review each member against the <strong>{parsed.profile?.label || "companion guide"}</strong> spec.
                 </p>
                 <ul style={{ margin: 0, paddingLeft: "20px" }}>
                   {parsed.validation.warnings.map((msg, i) => (

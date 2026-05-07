@@ -47,7 +47,9 @@ function createEmptyMember() {
         maintenanceTypeCode: "",
         maintenanceReasonCode: "",
         benefitStatusCode: "",
+        cobraEventCode: "",
         employmentStatusCode: "",
+        studentStatusCode: "",
         deathDate: "",
         lastName: "",
         firstName: "",
@@ -81,7 +83,9 @@ function createEmptyMember() {
             maintenanceTypeCode: "",
             maintenanceReasonCode: "",
             benefitStatusCode: "",
+            cobraEventCode: "",
             employmentStatusCode: "",
+            studentStatusCode: "",
             deathDate: "",
             lastName: "",
             firstName: "",
@@ -332,6 +336,7 @@ export function parse834(raw) {
                     receiverId: elements[8],
                     interchangeDate: elements[9],
                     interchangeTime: elements[10],
+                    ediVersion: elements[12],
                     controlNumber: elements[13],
                     usageIndicator: elements[15],
                     componentElementSeparator: elements[16],
@@ -403,7 +408,9 @@ export function parse834(raw) {
                 currentMember.maintenanceTypeCode = elements[3] || "";
                 currentMember.maintenanceReasonCode = elements[4] || "";
                 currentMember.benefitStatusCode = elements[5] || "";
+                currentMember.cobraEventCode = elements[7] || "";
                 currentMember.employmentStatusCode = elements[8] || "";
+                currentMember.studentStatusCode = elements[9] || "";
                 currentMember.maritalStatusCode = elements[11] || "";
                 currentMember.deathDate = elements[12] || "";
 
@@ -473,6 +480,10 @@ export function parse834(raw) {
                         currentCoverage.paymentCategoryRef = refValue;
                         currentCoverage.trace = currentCoverage.trace || {};
                         currentCoverage.trace.paymentCategoryRef = "REF*9V";
+                    } else if (refQualifier === "ZZ") {
+                        currentCoverage.ratingInfo = refValue;
+                        currentCoverage.trace = currentCoverage.trace || {};
+                        currentCoverage.trace.ratingInfo = "REF*ZZ";
                     }
                 }
                 break;
@@ -694,127 +705,74 @@ export function parse834(raw) {
         result.validation.errors.push("No INS member loops were found.");
     }
 
+    // ── Profile Detection ─────────────────────────────────────────────────────
+    // Auto-detect validation profile from GS02 (sender) and GS08 (version string).
+    // CaliforniaChoice sends as GS02="CC". Version string distinguishes 4010 vs 5010.
+    {
+        const _sender = (result.group?.senderCode || "").trim().toUpperCase();
+        const _version = (result.group?.version || "").trim();
+        let _profileId = "AP";
+        if (_sender === "CC") {
+            _profileId = _version.startsWith("004") ? "CHOICE_4010" : "CHOICE_5010";
+        }
+        result.profile = {
+            id: _profileId,
+            label:
+                _profileId === "CHOICE_4010"
+                    ? "CaliforniaChoice — Legacy 4010 (v1.11)"
+                    : _profileId === "CHOICE_5010"
+                        ? "CaliforniaChoice — HIPAA 5010 (v1.12 / v1.5 / v1.6)"
+                        : "A&P / CMS FFE v7.2",
+            detectedFrom:
+                _sender === "CC"
+                    ? `GS02=CC, GS08=${_version}`
+                    : "default (GS02 ≠ CC)",
+        };
+    }
+    const isChoiceProfile =
+        result.profile.id === "CHOICE_4010" || result.profile.id === "CHOICE_5010";
+    // ─────────────────────────────────────────────────────────────────────────
+
     // ── Tier 1 code-set lookup tables ────────────────────────────────────────
-    const VALID_RELATIONSHIP_CODES = new Set([
-        "18", // Self (subscriber)
-        "01", // Spouse
-        "19", // Child
-        "15", // Ward
-        "17", // Step child
-        "03", // Father or Mother
-        "04", // Grandfather or Grandmother
-        "05", // Grandson or Granddaughter
-        "07", // Nephew or Niece
-        "10", // Foster child
-        "21", // Unknown
-        "39", // Organ Donor
-        "40", // Cadaver Donor
-        "41", // Injured Plaintiff
-        "43", // Life Partner
-        "53", // Life Insurance Beneficiary
-        "G8", // Other Relationship
-    ]);
+    // Tables are profile-conditional: Choice uses a narrower X12v4010/v5010 set;
+    // A&P uses the CMS FFE v7.2 set.
 
-    const VALID_MAINTENANCE_TYPE_CODES = new Set([
-        "001", // Change
-        "002", // Delete
-        "021", // Addition
-        "024", // Cancellation or Termination
-        "025", // Reinstatement
-        "026", // Correction
-        "030", // Audit or Compare
-        "032", // Employee Information Not Available
-    ]);
+    const VALID_RELATIONSHIP_CODES = isChoiceProfile
+        ? new Set(["18", "01", "53", "19", "09", "ZZ"])
+        : new Set([
+              "18", "01", "19", "15", "17", "03", "04", "05", "07", "10",
+              "21", "39", "40", "41", "43", "53", "G8",
+          ]);
 
-    const VALID_MAINTENANCE_REASON_CODES = new Set([
-        "01", // Divorce
-        "02", // Birth
-        "03", // Death
-        "04", // Retirement
-        "05", // Adoption
-        "06", // Strike
-        "07", // Termination of Benefits
-        "08", // Termination of Employment
-        "09", // Consolidation (COBRA)
-        "10", // Disability
-        "11", // Educational or Student
-        "14", // Leave of Absence (FMLA)
-        "15", // Leave of Absence (Non-FMLA)
-        "16", // Layoff
-        "17", // Marital Status Change
-        "18", // Marriage
-        "20", // No Longer Active
-        "21", // Moved to Part-Time
-        "22", // Open Enrollment Period
-        "25", // Change of Address
-        "26", // Change in Coverage
-        "27", // Employee Status Change
-        "28", // Benefits Cancel on this Date
-        "30", // Enrollment Change (HIPAA)
-        "31", // Medicare
-        "32", // Medicare Part A
-        "33", // Medicare Part B
-        "37", // Qualifying Life Event
-        "38", // Change in Benefits
-        "40", // Employment Status Change (COBRA)
-        "AI", // Involuntary Disenrollment
-        "AV", // Voluntary Disenrollment
-        "BJ", // Not in Service Area
-        "CC", // Carrier Change
-        "XN", // Non-Payment of Premium
-        "XT", // Termination
-        "ZZ", // Mutually Defined
-    ]);
+    const VALID_MAINTENANCE_TYPE_CODES = isChoiceProfile
+        ? new Set(["001", "021", "024", "025", "026", "030"])
+        : new Set(["001", "002", "021", "024", "025", "026", "030", "032"]);
 
-    const VALID_BENEFIT_STATUS_CODES = new Set([
-        "A", // Active
-        "C", // COBRA
-        "S", // Surviving Insured
-        "T", // Tax Equity Fiscal Responsibility Act (TEFRA)
-    ]);
+    const VALID_MAINTENANCE_REASON_CODES = isChoiceProfile
+        ? new Set([
+              "03", "07", "08", "09", "12", "14",
+              "20", "22", "24", "25", "28", "29", "33", "41",
+              "AI", "XN",
+          ])
+        : new Set([
+              "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+              "11", "14", "15", "16", "17", "18", "20", "21", "22", "25",
+              "26", "27", "28", "30", "31", "32", "33", "37", "38", "40",
+              "AI", "AV", "BJ", "CC", "XN", "XT", "ZZ",
+          ]);
 
-    const VALID_INSURANCE_LINE_CODES = new Set([
-        "AK",  // Accidental Death & Dismemberment
-        "BL",  // Blue Cross/Blue Shield
-        "CH",  // Champus
-        "CI",  // Commercial Insurance Code
-        "CO",  // COBRA
-        "DB",  // Disability Benefits
-        "DE",  // Dental
-        "DEN", // Dental (common alt)
-        "DS",  // Disability
-        "DT",  // Dental Capitation
-        "EP",  // Employee Assistance Program
-        "FA",  // Flexible Spending Account
-        "GS",  // Group Supplemental
-        "HC",  // Health Care Flexible Spending Account
-        "HIP", // Health Insurance Premium Payment
-        "HLT", // Health (common alt)
-        "HP",  // Health
-        "HV",  // Health Maintenance Organization (HMO)
-        "LD",  // Long-Term Disability
-        "LI",  // Life
-        "LT",  // Long-Term Care
-        "LTC", // Long-Term Care (common alt)
-        "MA",  // Medicare Part A
-        "MB",  // Medicare Part B
-        "MH",  // Mental Health
-        "MM",  // Major Medical
-        "OT",  // Other
-        "PE",  // Pediatric
-        "PP",  // Prescription Drug (PPO)
-        "PRA", // Prescription Drug Plan A
-        "PRE", // Prescription Drug (common)
-        "RX",  // Prescription Drug
-        "SK",  // Skip
-        "ST",  // Supplemental
-        "TRS", // TRICARE Supplemental
-        "VA",  // Veterans Affairs
-        "VIS", // Vision (common alt)
-        "VS",  // Vision
-        "WC",  // Workers Compensation
-        "WCC", // Workers Compensation (fee schedule)
-    ]);
+    const VALID_BENEFIT_STATUS_CODES = isChoiceProfile
+        ? new Set(["A", "C"])
+        : new Set(["A", "C", "S", "T"]);
+
+    const VALID_INSURANCE_LINE_CODES = isChoiceProfile
+        ? new Set(["DCP", "DEN", "HLT", "HMO", "PPO", "POS", "VIS"])
+        : new Set([
+              "AK", "BL", "CH", "CI", "CO", "DB", "DE", "DEN", "DS", "DT",
+              "EP", "FA", "GS", "HC", "HIP", "HLT", "HP", "HV", "LD", "LI",
+              "LT", "LTC", "MA", "MB", "MH", "MM", "OT", "PE", "PP", "PRA",
+              "PRE", "RX", "SK", "ST", "TRS", "VA", "VIS", "VS", "WC", "WCC",
+          ]);
 
     const VALID_GENDER_CODES = new Set(["M", "F", "U"]);
 
@@ -824,45 +782,22 @@ export function parse834(raw) {
         "22", // Information Copy
     ]);
 
-    const VALID_COVERAGE_LEVEL_CODES = new Set([
-        "CHD", // Children Only
-        "DEP", // Dependents Only
-        "E1C", // Employee and One Dependent
-        "ECH", // Employee and Children
-        "EMP", // Employee Only
-        "ESP", // Employee and Spouse
-        "FAM", // Family
-        "IND", // Individual
-        "SPC", // Spouse and Children
-        "SPO", // Spouse Only
-        "TWO", // Two-Party
-    ]);
+    const VALID_COVERAGE_LEVEL_CODES = isChoiceProfile
+        ? new Set(["ECH", "EMP", "ESP", "FAM"])
+        : new Set([
+              "CHD", "DEP", "E1C", "ECH", "EMP", "ESP", "FAM",
+              "IND", "SPC", "SPO", "TWO",
+          ]);
 
     const VALID_MARITAL_STATUS_CODES = new Set([
-        "B", // Registered Domestic Partner (CA)
-        "D", // Divorced
-        "I", // Single
-        "M", // Married
-        "R", // Registered Domestic Partner (CMS FFE)
-        "S", // Separated
-        "U", // Unmarried / Never Married
-        "W", // Widowed
-        "X", // Legally Separated
+        "B", "D", "I", "M", "R", "S", "U", "W", "X",
     ]);
 
-    const VALID_EMPLOYMENT_STATUS_CODES = new Set([
-        "AC", // Active
-        "AE", // Active Military — Overseas
-        "AO", // Active Military — USA
-        "AU", // Automobile
-        "FT", // Full-time
-        "PT", // Part-time
-        "RE", // Retired
-        "RT", // Retired
-        "TE", // Terminated
-        "TT", // Total and Permanent Disability
-        "XO", // COBRA
-    ]);
+    const VALID_EMPLOYMENT_STATUS_CODES = isChoiceProfile
+        ? new Set(["AC", "FT", "TE"])
+        : new Set([
+              "AC", "AE", "AO", "AU", "FT", "PT", "RE", "RT", "TE", "TT", "XO",
+          ]);
     // ─────────────────────────────────────────────────────────────────────────
 
     // BGN purpose code check (transaction-level)
@@ -1157,8 +1092,9 @@ export function parse834(raw) {
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── Group D — 2750 Loop Code Sets (CMS FFE Companion Guide v7.2) ─────────
-
-    // Valid SEP REASON codes (Appendix A, Table 26)
+    // These checks only apply to A&P / CMS FFE files. Choice files do not have
+    // a 2750 loop, APTC, SEP REASON, AMRC, or CMS-specific race/ethnicity codes.
+    if (!isChoiceProfile) {
     const VALID_SEP_REASON_CODES = new Set([
         "02-BIRTH",
         "05-ADOPTION",
@@ -1301,16 +1237,19 @@ export function parse834(raw) {
             });
         }
     });
+    } // end !isChoiceProfile (Group D)
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── Field Format / Content Checks ────────────────────────────────────────
 
-    // BGN-02 reference number must be 4–9 digits
-    const bgnRef = result.transaction.referenceNumber || "";
-    if (bgnRef && !/^\d{4,9}$/.test(bgnRef)) {
-        result.validation.warnings.push(
-            `BGN-02 reference number "${bgnRef}" must be a 4–9 digit numeric value.`
-        );
+    // BGN-02 reference number must be 4–9 digits (A&P only; Choice uses a free-form History ID)
+    if (!isChoiceProfile) {
+        const bgnRef = result.transaction.referenceNumber || "";
+        if (bgnRef && !/^\d{4,9}$/.test(bgnRef)) {
+            result.validation.warnings.push(
+                `BGN-02 reference number "${bgnRef}" must be a 4–9 digit numeric value.`
+            );
+        }
     }
 
     // Duplicate REF*0F subscriber IDs across members
@@ -1374,20 +1313,69 @@ export function parse834(raw) {
             );
         }
 
-        // DMG-04 marital status — CMS guide: only valid on subscriber loop
+        // DMG-04 marital status — only valid on subscriber loop
         if (member.maritalStatusCode && !member.isSubscriber) {
+            const guideRef = isChoiceProfile ? "CaliforniaChoice companion guide" : "CMS FFE guide";
             result.validation.warnings.push(
-                `${label} has a marital status code (INS-11/DMG-04) "${member.maritalStatusCode}" but is not the subscriber. Per CMS FFE guide, marital status is only sent on the subscriber loop.`
+                `${label} has a marital status code (INS-11/DMG-04) "${member.maritalStatusCode}" but is not the subscriber. Per the ${guideRef}, marital status is only sent on the subscriber loop.`
             );
         }
 
-        // INS-08 employment status — CMS guide: only valid on subscriber loop
+        // INS-08 employment status — only valid on subscriber loop
         if (member.employmentStatusCode && !member.isSubscriber) {
+            const guideRef = isChoiceProfile ? "CaliforniaChoice companion guide" : "CMS FFE guide";
             result.validation.warnings.push(
-                `${label} has an employment status code (INS-08) "${member.employmentStatusCode}" but is not the subscriber. Per CMS FFE guide, employment status is only sent on the subscriber loop.`
+                `${label} has an employment status code (INS-08) "${member.employmentStatusCode}" but is not the subscriber. Per the ${guideRef}, employment status is only sent on the subscriber loop.`
             );
         }
     });
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Choice-Specific Checks ───────────────────────────────────────────────
+    if (isChoiceProfile) {
+        // INS-07 COBRA qualifying event codes: 1=Termination of Employment,
+        // 2=Reduction of Work Hours, 3=Medicare, 4=Death, 5=Divorce,
+        // 6=Separation, 7=Ineligible Child, 8=Bankruptcy of Retired Employee
+        const VALID_COBRA_EVENT_CODES = new Set(["1", "2", "3", "4", "5", "6", "7", "8"]);
+
+        // INS-09 student status codes
+        const VALID_STUDENT_STATUS_CODES = new Set(["F", "N", "P"]);
+
+        // REF*ZZ rating info (Loop 2300, medical carriers only):
+        // 2-char flag + 2-char area + 5-digit ZIP + 1+ county name chars
+        // e.g. "ER0092780ORANGE"
+        const CHOICE_RATING_PATTERN = /^[A-Z0-9]{2}[A-Z0-9]{2}\d{5}.+$/i;
+
+        result.members.forEach((member, index) => {
+            const label = `Member ${index + 1}`;
+
+            // INS-07 COBRA qualifying event code
+            if (member.cobraEventCode && !VALID_COBRA_EVENT_CODES.has(member.cobraEventCode)) {
+                result.validation.warnings.push(
+                    `${label} has unrecognised INS-07 COBRA qualifying event code "${member.cobraEventCode}". Expected 1–8.`
+                );
+            }
+
+            // INS-09 student status code (dependents only, non-subscriber)
+            if (member.studentStatusCode && !VALID_STUDENT_STATUS_CODES.has(member.studentStatusCode)) {
+                result.validation.warnings.push(
+                    `${label} has unrecognised INS-09 student status code "${member.studentStatusCode}". Expected F (full-time), N (not a student), or P (part-time).`
+                );
+            }
+
+            // REF*ZZ rating info format check (coverage-level, medical carriers)
+            member.coverages.forEach((coverage, ci) => {
+                const covLabel = `${label} Coverage ${ci + 1}`;
+                if (coverage.ratingInfo) {
+                    if (!CHOICE_RATING_PATTERN.test(coverage.ratingInfo)) {
+                        result.validation.warnings.push(
+                            `${covLabel} REF*ZZ rating info "${coverage.ratingInfo}" does not match the CaliforniaChoice format (2-char flag + 2-char area + 5-digit ZIP + county name, e.g. ER0092780ORANGE).`
+                        );
+                    }
+                }
+            });
+        });
+    }
     // ─────────────────────────────────────────────────────────────────────────
 
     return result;
