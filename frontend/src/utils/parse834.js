@@ -753,8 +753,13 @@ export function parse834(raw, profileOverride = null) {
     // Tables are profile-conditional: Choice uses a narrower X12v4010/v5010 set;
     // A&P uses the CMS FFE v7.2 set.
 
+    // INS-02 Relationship Codes:
+    // v1.11/v1.5/v1.6: ZZ (Mutually Defined) is allowed when no employee/dependent info
+    // v1.12 HIPAA: ZZ is NOT listed — only 18, 01, 53, 09, 19
     const VALID_RELATIONSHIP_CODES = isChoiceProfile
-        ? new Set(["18", "01", "53", "19", "09", "ZZ"])
+        ? (result.profile.id === "CHOICE_5010_HIPAA"
+            ? new Set(["18", "01", "53", "09", "19"])
+            : new Set(["18", "01", "53", "19", "09", "ZZ"]))
         : new Set([
               "18", "01", "19", "15", "17", "03", "04", "05", "07", "10",
               "21", "39", "40", "41", "43", "53", "G8",
@@ -765,14 +770,12 @@ export function parse834(raw, profileOverride = null) {
         : new Set(["001", "002", "021", "024", "025", "026", "030", "032"]);
 
     // INS-04 Maintenance Reason Codes:
-    // v1.12 (HIPAA) adds code 43 (Change of Location) vs v1.5/v1.6/v1.11
+    // v1.12 HIPAA: adds 05 (Adoption) and 43 (Change of Location); drops 12 (Lay Off) and 24 (Retired)
+    // v1.11/v1.5/v1.6: has 12 and 24 but NOT 05 or 43
     const VALID_MAINTENANCE_REASON_CODES = isChoiceProfile
-        ? new Set([
-              "03", "05", "07", "08", "09", "14",
-              "20", "22", "25", "28", "29", "33", "41",
-              ...(result.profile.id === "CHOICE_5010_HIPAA" ? ["43"] : []),
-              "AI", "XN",
-          ])
+        ? (result.profile.id === "CHOICE_5010_HIPAA"
+            ? new Set(["03", "05", "07", "08", "09", "14", "20", "22", "25", "28", "29", "33", "41", "43", "AI", "XN"])
+            : new Set(["03", "07", "08", "09", "12", "14", "20", "22", "24", "25", "28", "29", "33", "41", "AI", "XN"]))
         : new Set([
               "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
               "11", "14", "15", "16", "17", "18", "20", "21", "22", "25",
@@ -823,11 +826,15 @@ export function parse834(raw, profileOverride = null) {
     ]);
 
     // INS-08 Employment Status Codes:
-    // v1.12 HIPAA adds PT (Part-time); v1.5/v1.6/v1.11 only have AC, FT, TE
+    // v1.12 HIPAA: AC, FT, PT, TE
+    // v1.5/v1.6 non-HIPAA: AC, FT, TE (no PT)
+    // v1.11 4010: FT, PT, TE (has PT but no AC — AC was added in 5010 guides)
     const VALID_EMPLOYMENT_STATUS_CODES = isChoiceProfile
         ? (result.profile.id === "CHOICE_5010_HIPAA"
             ? new Set(["AC", "FT", "PT", "TE"])
-            : new Set(["AC", "FT", "TE"]))
+            : result.profile.id === "CHOICE_4010"
+                ? new Set(["FT", "PT", "TE"])
+                : new Set(["AC", "FT", "TE"]))
         : new Set([
               "AC", "AE", "AO", "AU", "FT", "PT", "RE", "RT", "TE", "TT", "XO",
           ]);
