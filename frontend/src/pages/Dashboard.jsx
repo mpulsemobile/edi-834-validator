@@ -296,7 +296,8 @@ const SCENARIOS = [
   { value: `${BASE}/sample-data/TEST-structural-errors.edi`, label: "⚠ TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
   { value: `${BASE}/sample-data/TEST-groupD-2750-errors.edi`, label: "⚠ TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
   { value: `${BASE}/sample-data/TEST-field-format-errors.edi`, label: "⚠ TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
-  { value: `${BASE}/sample-data/TEST-choice-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 — Anthem BlueCross HMO (subscriber + spouse)" },
+  { value: `${BASE}/sample-data/TEST-choice-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 HIPAA — Anthem BlueCross HMO (subscriber + spouse)" },
+  { value: `${BASE}/sample-data/TEST-choice-5010-nohipaa-metlife.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 Non-HIPAA — MetLife Dental/Vision (subscriber + spouse)" },
 ];
 
 function getMemberIssues(member) {
@@ -619,8 +620,9 @@ export default function Dashboard() {
               >
                 <option value="">— Select a profile to begin —</option>
                 <option value="AP">A&amp;P / CMS FFE v7.2</option>
-                <option value="CHOICE_5010">CaliforniaChoice — HIPAA 5010 (v1.12)</option>
-                <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010 (v1.11)</option>
+                <option value="CHOICE_5010_HIPAA">CaliforniaChoice — HIPAA 5010 (v1.12 — Anthem/Oscar/Sharp/Sutter…)</option>
+                <option value="CHOICE_5010_NOHIPAA">CaliforniaChoice — Non-HIPAA 5010 (v1.5/v1.6 — MetLife/Western Health/United Health)</option>
+                <option value="CHOICE_4010">CaliforniaChoice — Legacy 4010 (v1.11 — Kaiser/Landmark)</option>
               </select>
             </div>
 

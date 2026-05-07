@@ -710,24 +710,32 @@ export function parse834(raw, profileOverride = null) {
     // Otherwise auto-detect from GS02 (sender) and GS08 (version string).
     {
         let _profileId;
-        if (profileOverride && ["AP", "CHOICE_5010", "CHOICE_4010"].includes(profileOverride)) {
+        if (profileOverride && ["AP", "CHOICE_5010_HIPAA", "CHOICE_5010_NOHIPAA", "CHOICE_4010"].includes(profileOverride)) {
             _profileId = profileOverride;
         } else {
             const _sender = (result.group?.senderCode || "").trim().toUpperCase();
             const _version = (result.group?.version || "").trim();
             _profileId = "AP";
             if (_sender === "CC") {
-                _profileId = _version.startsWith("004") ? "CHOICE_4010" : "CHOICE_5010";
+                if (_version.startsWith("004")) {
+                    _profileId = "CHOICE_4010";
+                } else if (_version === "005010X220A1") {
+                    _profileId = "CHOICE_5010_HIPAA";
+                } else {
+                    _profileId = "CHOICE_5010_NOHIPAA"; // 005010X220 or 005010
+                }
             }
         }
         result.profile = {
             id: _profileId,
             label:
                 _profileId === "CHOICE_4010"
-                    ? "CaliforniaChoice — Legacy 4010 (v1.11)"
-                    : _profileId === "CHOICE_5010"
-                        ? "CaliforniaChoice — HIPAA 5010 (v1.12 / v1.5 / v1.6)"
-                        : "A&P / CMS FFE v7.2",
+                    ? "CaliforniaChoice — Legacy 4010 (v1.11 — Kaiser/Landmark)"
+                    : _profileId === "CHOICE_5010_HIPAA"
+                        ? "CaliforniaChoice — HIPAA 5010 (v1.12 — Anthem/Oscar/Sharp/Sutter/HealthNet etc.)"
+                        : _profileId === "CHOICE_5010_NOHIPAA"
+                            ? "CaliforniaChoice — Non-HIPAA 5010 (v1.5/v1.6 — MetLife/Western Health/United Health)"
+                            : "A&P / CMS FFE v7.2",
             detectedFrom: profileOverride
                 ? "manual selection"
                 : (result.group?.senderCode || "").trim().toUpperCase() === "CC"
@@ -736,7 +744,9 @@ export function parse834(raw, profileOverride = null) {
         };
     }
     const isChoiceProfile =
-        result.profile.id === "CHOICE_4010" || result.profile.id === "CHOICE_5010";
+        result.profile.id === "CHOICE_4010" ||
+        result.profile.id === "CHOICE_5010_HIPAA" ||
+        result.profile.id === "CHOICE_5010_NOHIPAA";
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── Tier 1 code-set lookup tables ────────────────────────────────────────
@@ -754,10 +764,13 @@ export function parse834(raw, profileOverride = null) {
         ? new Set(["001", "021", "024", "025", "026", "030"])
         : new Set(["001", "002", "021", "024", "025", "026", "030", "032"]);
 
+    // INS-04 Maintenance Reason Codes:
+    // v1.12 (HIPAA) adds code 43 (Change of Location) vs v1.5/v1.6/v1.11
     const VALID_MAINTENANCE_REASON_CODES = isChoiceProfile
         ? new Set([
-              "03", "07", "08", "09", "12", "14",
-              "20", "22", "24", "25", "28", "29", "33", "41",
+              "03", "05", "07", "08", "09", "14",
+              "20", "22", "25", "28", "29", "33", "41",
+              ...(result.profile.id === "CHOICE_5010_HIPAA" ? ["43"] : []),
               "AI", "XN",
           ])
         : new Set([
@@ -771,8 +784,14 @@ export function parse834(raw, profileOverride = null) {
         ? new Set(["A", "C"])
         : new Set(["A", "C", "S", "T"]);
 
+    // HD-03 Insurance Line Codes:
+    // v1.12 HIPAA: DCP, DEN, HMO, PPO, VIS (does NOT list HLT or POS)
+    // v1.5/v1.6 non-HIPAA: DCP, DEN, HLT, HMO, PPO, POS, VIS
+    // v1.11 4010: same as v1.5/v1.6
     const VALID_INSURANCE_LINE_CODES = isChoiceProfile
-        ? new Set(["DCP", "DEN", "HLT", "HMO", "PPO", "POS", "VIS"])
+        ? (result.profile.id === "CHOICE_5010_HIPAA"
+            ? new Set(["DCP", "DEN", "HMO", "PPO", "VIS"])
+            : new Set(["DCP", "DEN", "HLT", "HMO", "PPO", "POS", "VIS"]))
         : new Set([
               "AK", "BL", "CH", "CI", "CO", "DB", "DE", "DEN", "DS", "DT",
               "EP", "FA", "GS", "HC", "HIP", "HLT", "HP", "HV", "LD", "LI",
@@ -788,8 +807,12 @@ export function parse834(raw, profileOverride = null) {
         "22", // Information Copy
     ]);
 
+    // HD-05 Coverage Level Codes:
+    // v1.12 HIPAA adds IND; v1.5/v1.6/v1.11 do not include IND
     const VALID_COVERAGE_LEVEL_CODES = isChoiceProfile
-        ? new Set(["ECH", "EMP", "ESP", "FAM"])
+        ? (result.profile.id === "CHOICE_5010_HIPAA"
+            ? new Set(["ECH", "EMP", "ESP", "FAM", "IND"])
+            : new Set(["ECH", "EMP", "ESP", "FAM"]))
         : new Set([
               "CHD", "DEP", "E1C", "ECH", "EMP", "ESP", "FAM",
               "IND", "SPC", "SPO", "TWO",
@@ -799,8 +822,12 @@ export function parse834(raw, profileOverride = null) {
         "B", "D", "I", "M", "R", "S", "U", "W", "X",
     ]);
 
+    // INS-08 Employment Status Codes:
+    // v1.12 HIPAA adds PT (Part-time); v1.5/v1.6/v1.11 only have AC, FT, TE
     const VALID_EMPLOYMENT_STATUS_CODES = isChoiceProfile
-        ? new Set(["AC", "FT", "TE"])
+        ? (result.profile.id === "CHOICE_5010_HIPAA"
+            ? new Set(["AC", "FT", "PT", "TE"])
+            : new Set(["AC", "FT", "TE"]))
         : new Set([
               "AC", "AE", "AO", "AU", "FT", "PT", "RE", "RT", "TE", "TT", "XO",
           ]);
