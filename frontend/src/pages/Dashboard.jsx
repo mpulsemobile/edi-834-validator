@@ -266,38 +266,37 @@ const styles = {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const SCENARIOS = [
   { value: "", label: "Load Sample Scenario..." },
-  // SEP Off-Exchange — Subscriber Only (Green)
-  { value: `${BASE}/sample-data/01-sep-off-exchange-subscriber-only-medical.edi`, label: "01 — SEP New Enrollment: Subscriber Only — Medical" },
-  { value: `${BASE}/sample-data/02-sep-off-exchange-subscriber-only-vision.edi`, label: "02 — SEP New Enrollment: Subscriber Only — Vision" },
-  { value: `${BASE}/sample-data/03-sep-off-exchange-subscriber-only-dental.edi`, label: "03 — SEP New Enrollment: Subscriber Only — Dental" },
-  // SEP Termination — Subscriber Only (Green)
-  { value: `${BASE}/sample-data/04-sep-off-exchange-subscriber-only-medical-terminate.edi`, label: "04 — SEP Termination: Subscriber Only — Medical" },
-  { value: `${BASE}/sample-data/05-sep-off-exchange-subscriber-only-dental-terminate.edi`, label: "05 — SEP Termination: Subscriber Only — Dental" },
-  { value: `${BASE}/sample-data/06-sep-off-exchange-subscriber-only-vision-terminate.edi`, label: "06 — SEP Termination: Subscriber Only — Vision" },
-  // Add Spouse — Subscriber Cancellation (Blue)
-  { value: `${BASE}/sample-data/07-add-spouse-subscriber-cancel-medical.edi`, label: "07 — Add Spouse: Subscriber Cancellation — Medical" },
-  { value: `${BASE}/sample-data/08-add-spouse-subscriber-cancel-dental.edi`, label: "08 — Add Spouse: Subscriber Cancellation — Dental" },
-  { value: `${BASE}/sample-data/09-add-spouse-subscriber-cancel-vision.edi`, label: "09 — Add Spouse: Subscriber Cancellation — Vision" },
-  // Add Spouse — New Enrollment: Subscriber + Spouse (Blue)
-  { value: `${BASE}/sample-data/10-add-spouse-subscriber-and-spouse-medical.edi`, label: "10 — Add Spouse: New Subscriber + Spouse — Medical" },
-  { value: `${BASE}/sample-data/11-add-spouse-subscriber-and-spouse-dental.edi`, label: "11 — Add Spouse: New Subscriber + Spouse — Dental" },
-  { value: `${BASE}/sample-data/12-add-spouse-subscriber-and-spouse-vision.edi`, label: "12 — Add Spouse: New Subscriber + Spouse — Vision" },
-  // Add Dependent to Subscriber and Spouse
-  { value: `${BASE}/sample-data/13-add-dependent-to-subscriber-and-spouse.edi`, label: "13 — Add Dependent to Subscriber + Spouse" },
-  // New Enrollment — Subscriber, Spouse, and Dependent
-  { value: `${BASE}/sample-data/14-new-enrollment-subscriber-spouse-dependent.edi`, label: "14 — New Enrollment: Subscriber + Spouse + Dependent" },
-  // New Enrollment — Subscriber, Spouse, Dependent (Multi-Coverage)
-  { value: `${BASE}/sample-data/15B-new-enrollment-subscriber-spouse-dependent-medical.edi`, label: "15B — New Enrollment: Subscriber + Spouse + Dependent — Medical" },
-  { value: `${BASE}/sample-data/15A-new-enrollment-subscriber-spouse-dependent-dental.edi`, label: "15A — New Enrollment: Subscriber + Spouse + Dependent — Dental" },
-  { value: `${BASE}/sample-data/15C-new-enrollment-subscriber-spouse-dependent-vision.edi`, label: "15C — New Enrollment: Subscriber + Spouse + Dependent — Vision" },
-  // Validation test files — intentionally invalid, used to verify warning output
-  { value: `${BASE}/sample-data/TEST-tier1-invalid-codes.edi`, label: "⚠ TEST: Tier 1 — Invalid Code-Set Values (INS-02/03/04)" },
-  { value: `${BASE}/sample-data/TEST-tier2-date-errors.edi`, label: "⚠ TEST: Tier 2 — Date Logic Errors (DOB in future, begin > end)" },
-  { value: `${BASE}/sample-data/TEST-structural-errors.edi`, label: "⚠ TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
-  { value: `${BASE}/sample-data/TEST-groupD-2750-errors.edi`, label: "⚠ TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
-  { value: `${BASE}/sample-data/TEST-field-format-errors.edi`, label: "⚠ TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
-  { value: `${BASE}/sample-data/TEST-choice-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 HIPAA — Anthem BlueCross HMO (subscriber + spouse)" },
-  { value: `${BASE}/sample-data/TEST-choice-5010-nohipaa-metlife.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 Non-HIPAA — MetLife Dental/Vision (subscriber + spouse)" },
+  // A&P IHG — SEP Off-Exchange: Subscriber Only
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-medical.edi`, label: "A&P IHG — SEP New Enrollment: Subscriber Only — Medical" },
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-vision.edi`, label: "A&P IHG — SEP New Enrollment: Subscriber Only — Vision" },
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-dental.edi`, label: "A&P IHG — SEP New Enrollment: Subscriber Only — Dental" },
+  // A&P IHG — SEP Termination: Subscriber Only
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-medical-term.edi`, label: "A&P IHG — SEP Termination: Subscriber Only — Medical" },
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-dental-term.edi`, label: "A&P IHG — SEP Termination: Subscriber Only — Dental" },
+  { value: `${BASE}/sample-data/A&P-IHG-sep-off-sub-only-vision-term.edi`, label: "A&P IHG — SEP Termination: Subscriber Only — Vision" },
+  // A&P IHG — Add Spouse: Subscriber Cancellation
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-cancel-medical.edi`, label: "A&P IHG — Add Spouse: Subscriber Cancellation — Medical" },
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-cancel-dental.edi`, label: "A&P IHG — Add Spouse: Subscriber Cancellation — Dental" },
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-cancel-vision.edi`, label: "A&P IHG — Add Spouse: Subscriber Cancellation — Vision" },
+  // A&P IHG — Add Spouse: New Subscriber + Spouse
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-medical.edi`, label: "A&P IHG — Add Spouse: New Subscriber + Spouse — Medical" },
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-dental.edi`, label: "A&P IHG — Add Spouse: New Subscriber + Spouse — Dental" },
+  { value: `${BASE}/sample-data/A&P-IHG-add-spouse-to-sub-vision.edi`, label: "A&P IHG — Add Spouse: New Subscriber + Spouse — Vision" },
+  // A&P IHG — Add Dependent
+  { value: `${BASE}/sample-data/A&P-IHG-add-dep-to-sub-and-spouse.edi`, label: "A&P IHG — Add Dependent to Subscriber + Spouse" },
+  // A&P IHG — New Enrollment: Subscriber + Spouse + Dependent
+  { value: `${BASE}/sample-data/A&P-IHG-new-enroll-sub-spouse-dep-medical.edi`, label: "A&P IHG — New Enrollment: Subscriber + Spouse + Dependent — Medical" },
+  { value: `${BASE}/sample-data/A&P-IHG-new-enroll-sub-spouse-dep-dental.edi`, label: "A&P IHG — New Enrollment: Subscriber + Spouse + Dependent — Dental" },
+  { value: `${BASE}/sample-data/A&P-IHG-new-enroll-sub-spouse-dep-vision.edi`, label: "A&P IHG — New Enrollment: Subscriber + Spouse + Dependent — Vision" },
+  // A&P Validation test files — intentionally invalid, used to verify warning output
+  { value: `${BASE}/sample-data/A&P-TEST-tier1-invalid-codes.edi`, label: "⚠ A&P TEST: Tier 1 — Invalid Code-Set Values (INS-02/03/04)" },
+  { value: `${BASE}/sample-data/A&P-TEST-tier2-date-errors.edi`, label: "⚠ A&P TEST: Tier 2 — Date Logic Errors (DOB in future, begin > end)" },
+  { value: `${BASE}/sample-data/A&P-TEST-structural-errors.edi`, label: "⚠ A&P TEST: Structural — SE count, multiple subscribers, self≠subscriber" },
+  { value: `${BASE}/sample-data/A&P-TEST-groupD-2750-errors.edi`, label: "⚠ A&P TEST: Group D — 2750 Loop Errors (AMRC, SEP, Rating Area, Race codes)" },
+  { value: `${BASE}/sample-data/A&P-TEST-field-format-errors.edi`, label: "⚠ A&P TEST: Field Format — SSN/Phone/ZIP repeating, bad email, BGN-02, duplicate ID, dependent status" },
+  // CaliforniaChoice test files
+  { value: `${BASE}/sample-data/CHOICE-TEST-5010-anthem.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 HIPAA — Anthem BlueCross HMO (subscriber + spouse)" },
+  { value: `${BASE}/sample-data/CHOICE-TEST-5010-nohipaa-metlife.edi`, label: "✦ CHOICE: CaliforniaChoice 5010 Non-HIPAA — MetLife Dental/Vision (subscriber + spouse)" },
 ];
 
 function getMemberIssues(member) {
